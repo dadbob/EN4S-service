@@ -72,19 +72,28 @@ class Login(restful.Resource):
 
 
 class Register(restful.Resource):
+    # todo validate email
+    # todo hash password
+
     def post(self):
         data_dict = json.loads(request.data)
 
         username = str(data_dict['username'])
         password = str(data_dict['password'])
+        email = str(data_dict['email'])
 
         if not (username or password):
             return {'error': 'username or password not given'}, 404
         else:
             try:
                 db.users.insert(
-                    {"username": username, "password": password}
+                    {
+                        "username": username,
+                        "password": password,
+                        "email": email
+                    }
                 )
+
                 return {'success': "registered successfuly"}, 201
             except:
                 return {'error': "can't register"}, 404
