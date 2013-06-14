@@ -56,31 +56,30 @@ class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
         user = db.users.find_one(
-            {"username": str(data_dict['username'])}
+            {"username": unicode(data_dict['username'])}
         )
 
         if not user:
             return {'error': 'user not found'}, 404
-        if data_dict['password'] != str(data_dict["password"]):
+        if data_dict['password'] != unicode(data_dict["password"]):
             return {'error': 'password is invalid'}, 404
         else:
             session['user'] = user
             session['logged_in'] = True
             print "SESSION LOGIN logged_in value: " + \
-                str(session.get('logged_in'))
+                unicode(session.get('logged_in'))
             return {'success': 'logged in'}, 200
 
 
 class Register(restful.Resource):
     # todo validate email
-    # todo hash password
 
     def post(self):
         data_dict = json.loads(request.data)
 
-        username = str(data_dict['username'])
-        password = str(data_dict['password'])
-        email = str(data_dict['email'])
+        username = unicode(data_dict['username'])
+        password = unicode(data_dict['password'])
+        email = unicode(data_dict['email'])
 
         if not (username or password):
             return {'error': 'username or password not given'}, 404
@@ -93,7 +92,6 @@ class Register(restful.Resource):
                         "email": email
                     }
                 )
-
                 return {'success': "registered successfuly"}, 201
             except:
                 return {'error': "can't register"}, 404
@@ -124,8 +122,8 @@ class ComplaintRecent(restful.Resource):
             items = db.complaint.find().sort("date", pymongo.DESCENDING)
 
         for item in items:
-            item["_id"] = str(item["_id"])
-            item["date"] = str(item["date"])
+            item["_id"] = unicode(item["_id"])
+            item["date"] = unicode(item["date"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -147,8 +145,8 @@ class ComplaintTop(restful.Resource):
                                              pymongo.DESCENDING)
 
         for item in items:
-            item["_id"] = str(item["_id"])
-            item["date"] = str(item["date"])
+            item["_id"] = unicode(item["_id"])
+            item["date"] = unicode(item["date"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -164,8 +162,8 @@ class ComplaintNear(restful.Resource):
         lati = request.args.get('latitude', '')
         longi = request.args.get('longitude', '')
         category = request.args.get('category', '')
-        print "latitude: " + str(lati)
-        print "longitude: " + str(longi)
+        print "latitude: " + unicode(lati)
+        print "longitude: " + unicode(longi)
 
         if category is "":
             category = "all"
@@ -178,8 +176,8 @@ class ComplaintNear(restful.Resource):
             items = db.complaint.find({"location": {"$near": loc}})
 
         for item in items:
-            item["_id"] = str(item["_id"])
-            item["date"] = str(item["date"])
+            item["_id"] = unicode(item["_id"])
+            item["date"] = unicode(item["date"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -195,72 +193,72 @@ class Complaint(restful.Resource):
     def get(self):
         l = []
         for item in db.complaint.find():
-            item["_id"] = str(item["_id"])
-            item["date"] = str(item["date"])
+            item["_id"] = unicode(item["_id"])
+            item["date"] = unicode(item["date"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
 
     def post(self):
-        if not session.get("logged_in"):
-            return {'error': 'you need to be logged in'}, 404
-        else:
-            user = session["user"]
-            data_dict = json.loads(request.data)
+        user = session["user"]
+        d = request.data
 
-            username = str(user["username"])
-            category = str(data_dict['category'])
-            location = data_dict['location']
-            address = str(data_dict['address'])
-            city = str(data_dict['city'])
-            title = data_dict['title']
+        print "debug new complaint post here"
+        print d
+        data_dict = json.loads(request.data.decode("utf-8"))
+        print "debug new complaint post here 2"
 
-            new_complaint = {
-                "title": title,
-                "user": username,
-                "pics": [],
-                "category": category,
-                "upvoters": [user["username"]],
-                "upvote_count": 1,
-                "downvote_count": 0,
-                "location": location,
-                "address": address,
-                "city": city,
-                "date": datetime.now()
-            }
+        username = unicode(user["username"])
+        category = unicode(data_dict['category'])
+        location = data_dict['location']
+        address = unicode(data_dict['address'])
+        city = unicode(data_dict['city'])
+        title = unicode(data_dict['title'])
 
-            db.complaint.insert(new_complaint)
-            new_complaint["_id"] = str(new_complaint["_id"])
-            new_complaint["date"] = str(new_complaint["date"])
+        new_complaint = {
+            "title": title,
+            "user": username,
+            "pics": [],
+            "category": category,
+            "upvoters": [user["username"]],
+            "upvote_count": 1,
+            "downvote_count": 0,
+            "location": location,
+            "address": address,
+            "city": city,
+            "date": datetime.now()
+        }
 
-            return new_complaint, 201
+        db.complaint.insert(new_complaint)
+        new_complaint["_id"] = unicode(new_complaint["_id"])
+        new_complaint["date"] = unicode(new_complaint["date"])
+
+        return new_complaint, 201
 
 
-class ComplaintPicturePut(restful.Resource):
+class ComplaintPicture(restful.Resource):
     # todo base64 olarak degil
     # file objesi olarak almak daha verimli olacak.
+    method_decorators = [authenticate]
 
-    def put(self, obj_id):
-        if not session.get("logged_in"):
-            return {'error': 'you need to be logged in'}, 404
-        else:
-            data_dict = json.loads(request.data)
-            obj_id = ObjectId(str(obj_id))
-            obj = db.complaint.find_one({"_id": obj_id})
-            if not obj:
-                return abort(404)
-            city = obj["city"]
+    def post(self, obj_id):
+        data_dict = json.loads(request.data)
+        obj_id = ObjectId(unicode(obj_id))
+        obj = db.complaint.find_one({"_id": obj_id})
+        if not obj:
+            return abort(404)
+        city = unicode(obj["city"])
 
-            arr = data_dict["pic"]  # base 64 encoded
-            h = data_dict["hash"]  # hash of the pic
+        arr = data_dict["pic"]  # base 64 encoded
+        h = data_dict["hash"]  # hash of the pic
 
-            filename = byte_array_to_file(arr, city, h)
+        filename = byte_array_to_file(arr, city, h)
 
-            db.complaint.update(
-                {"_id": obj_id}, {"$addToSet": {"pics": filename}}
-            )
+        db.complaint.update(
+            {"_id": obj_id}, {"$addToSet": {"pics": filename}}
+        )
 
-            return {'success': 'update is complete'}
+        return {'path': str(filename)}, 201
 
 
 class ComplaintUpvote(restful.Resource):
@@ -268,7 +266,7 @@ class ComplaintUpvote(restful.Resource):
 
     def put(self, obj_id):
         data_dict = json.loads(request.data)
-        obj_id = ObjectId(str(obj_id))
+        obj_id = ObjectId(unicode(obj_id))
         obj = db.complaint.find_one({"_id": obj_id})
         if not obj:
             return abort(404)
@@ -305,8 +303,11 @@ class ComplaintUpvote(restful.Resource):
 class ComplaintSingle(restful.Resource):
     # implement this
     def get(self, obj_id):
-        obj_id = ObjectId(str(obj_id))
+        obj_id = ObjectId(unicode(obj_id))
         obj = db.complaint.find_one({"_id": obj_id})
+        obj["_id"] = unicode(obj["_id"])
+        obj["date"] = unicode(obj["date"])
+
         if not obj:
             return abort(404)
         return obj
@@ -322,7 +323,7 @@ def byte_array_to_file(array, city, h):
         pass
 
     # new_filename = IMAGEFOLDER + city + "/" +\
-    #            hashlib.sha256(str(array)).hexdigest() + ".jpg"
+    #            hashlib.sha256(unicode(array)).hexdigest() + ".jpg"
 
     new_filename = IMAGEFOLDER + city + "/" + h + ".jpg"
     new_url = URL + city + "/" + h + ".jpg"
@@ -344,7 +345,7 @@ api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
 api.add_resource(ComplaintRecent, '/complaint/recent')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
-api.add_resource(ComplaintPicturePut, '/upload/<string:obj_id>')
+api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
 
 
 if __name__ == '__main__':
