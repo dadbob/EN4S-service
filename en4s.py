@@ -37,6 +37,14 @@ def authenticate(func):
     return wrapper
 
 
+@app.route('/dashboard')
+def Dashboard():
+    items = db.complaint.find({"city": "Ankara"})
+    items = items.sort("upvote_count", pymongo.DESCENDING)
+    items.limit(10)
+    return render_template('dashboard.html', items=items)
+
+
 @app.route('/apidocs')
 def Docs():
     return render_template('users.html')
