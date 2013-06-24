@@ -37,6 +37,21 @@ def authenticate(func):
     return wrapper
 
 
+@app.route('/apidocs')
+def Docs():
+    return render_template('users.html')
+
+
+@app.route('/apidocs/users')
+def DocsUsers():
+    return render_template('users.html')
+
+
+@app.route('/apidocs/complaints')
+def DocsComplaints():
+    return render_template('complaints.html')
+
+
 class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
@@ -106,9 +121,12 @@ class ComplaintRecent(restful.Resource):
         else:
             items = db.complaint.find().sort("date", pymongo.DESCENDING)
 
+        items = items[:10]      # limit 10 item
+
         for item in items:
             item["_id"] = unicode(item["_id"])
-            item["date"] = unicode(item["date"])
+            item["date"] = unicode(
+                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -129,9 +147,12 @@ class ComplaintTop(restful.Resource):
             items = db.complaint.find().sort("upvote_count",
                                              pymongo.DESCENDING)
 
+        items = items[:10]      # limit 10 item
+
         for item in items:
             item["_id"] = unicode(item["_id"])
-            item["date"] = unicode(item["date"])
+            item["date"] = unicode(
+                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -160,9 +181,12 @@ class ComplaintNear(restful.Resource):
         else:
             items = db.complaint.find({"location": {"$near": loc}})
 
+        items = items[:10]      # limit 10 item
+
         for item in items:
             item["_id"] = unicode(item["_id"])
-            item["date"] = unicode(item["date"])
+            item["date"] = unicode(
+                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -272,7 +296,7 @@ class ComplaintUpvote(restful.Resource):
         distance = geopy.distance.distance(pt_comp, pt_user).km
         distance = float(distance)
 
-        if distance > 1:
+        if distance > 5:
             return {"error": "user is not close"}, 406
         else:
             db.complaint.update(
@@ -291,7 +315,7 @@ class ComplaintSingle(restful.Resource):
         obj_id = ObjectId(unicode(obj_id))
         obj = db.complaint.find_one({"_id": obj_id})
         obj["_id"] = unicode(obj["_id"])
-        obj["date"] = unicode(obj["date"])
+        obj["date"] = unicode(obj["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
 
         if not obj:
             return abort(404)
