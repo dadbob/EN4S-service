@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, session
 from flask import render_template, redirect, request
 
 from settings import db
@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
 
@@ -19,11 +19,24 @@ def betalogin():
     betapass = request.form['beta']
 
     if betapass == settings.BETAPASS:
-        print "pass ok"
+        session['logged_in'] = True
+        return redirect('/home')
     else:
         print "invalid login"
 
     return redirect('/')
+
+
+@app.route('/home')
+def home():
+    if session.get('logged_in'):
+        items = db.complaint.find()
+        items = items.sort("date", pymongo.DESCENDING)
+        items.limit(10)
+
+        return render_template('home/index.html', items=items)
+    else:
+        return redirect('/')
 
 
 @app.route('/dashboard')
