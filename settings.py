@@ -6,5 +6,5 @@ PORT = 5000
 DEBUG = True
 SECRET = "somesecretkeyhere"
 CLIENT = MongoClient('localhost', 27017)
-BETAPASS = "somebetapasshere"
+BETAPASS = "betapass"
 db = CLIENT.en4s

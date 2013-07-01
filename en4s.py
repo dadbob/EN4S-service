@@ -15,6 +15,9 @@ import settings
 import pymongo
 from bson import ObjectId
 
+# resize
+from PIL import Image
+
 app = Flask(__name__)
 api = restful.Api(app)
 
@@ -342,6 +345,16 @@ def byte_array_to_file(array, city, h):
     file = open(new_filename, "wb")
     file.write(array)
     file.close()
+
+    try:
+        for size in [(128, 1000), (256, 1000), (512, 1000)]:
+            thumbnail_path = IMAGEFOLDER + city + "/" + h + "." + str(size[0]) + ".jpg"
+            im = Image.open(new_filename)
+            im.thumbnail(size, Image.ANTIALIAS)
+            im.save(thumbnail_path, "JPEG")
+    except:
+        print "couldn't save the thumbnails. sorry"
+
     return new_url
 
 
