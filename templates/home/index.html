@@ -42,6 +42,9 @@
 
   <script src="{{ url_for('static', filename='js/libs/modernizr-2.6.2.min.js') }}"></script>
 
+  <!-- jquery -->
+  <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+
   <!-- mapbox test -->
   <link href='http://api.tiles.mapbox.com/mapbox.js/v1.0.3/mapbox.css' rel='stylesheet' />
   <!--[if lte IE 8]>
@@ -78,52 +81,126 @@
 
     <div class="row">
       <div id="harita"></div>
-      <script type="text/javascript">
-        var map = L.mapbox.map('harita', 'jeffisabelle.map-20zh8hdu')
-        .setView([39.895, 32.82], 17);
-      </script>
+
     </div>
     <br />
     <div class="row">
       <div class="four columns boxhome">
+        <h4 class="blacktext cizdir">
+          <i class="icon-time"></i>New Problems!</h4>
+
+        <div class="imgwrap">
+          <!-- <p> {{ items.0.pics.0 }} </p> -->
+          <img src="static{{ items.9.pics.0 }}" class="picitem" alt=""/>
+          <img src="static{{ items.10.pics.0 }}" class="picitem" alt="" />
+        </div>
+      </div>
+
+      <div class="four columns boxhome">
         <h4 class="blacktext cizdir"><i class="icon-location-arrow"></i>Near You!</h4>
 
-        <ul>
-          <li><i class="icon-comments-alt"></i> Yol Bozuklugu desem 2
-          satirlik bi hata girsem? </li>
-          <li><i class="icon-comments-alt"></i> Hede Hodosu </li>
-          <li><i class="icon-comments-alt"></i> Milenyum Balosu</li>
+        <!-- <ul> -->
+        <!--   <li><i class="icon-comments-alt"></i> Yol Bozuklugu desem 2 -->
+        <!--   satirlik bi hata girsem? </li> -->
+        <!--   <li><i class="icon-comments-alt"></i> Hede Hodosu </li> -->
+        <!--   <li><i class="icon-comments-alt"></i> Milenyum Balosu</li> -->
+        <!-- </ul> -->
 
-        </ul>
+        <div class="imgwrap">
+          <!-- <p> {{ items.0.pics.0 }} </p> -->
+          <img src="static{{ items.8.pics.0 }}" class="picitem" alt="" />
+          <img src="static{{ items.13.pics.0 }}" class="picitem" alt="" />
+        </div>
 
       </div>
 
       <div class="four columns boxhome">
         <h4 class="blacktext cizdir"><i class="icon-bar-chart"></i>Top Problems!</h4>
-      </div>
 
-      <div class="four columns boxhome">
-        <h4 class="blacktext cizdir"><i class="icon-bell"></i>Notifications!</h4>
+        <div class="imgwrap">
+          <!-- <p> {{ items.0.pics.0 }} </p> -->
+          <img src="static{{ items.11.pics.0 }}" class="picitem" alt=""/>
+          <img src="static{{ items.12.pics.0 }}" class="picitem" alt="" />
+        </div>
       </div>
     </div>
 
-    <div class="row" id="mainrow">
-      <!-- {% for item in items %} -->
-      <!-- <div class="row listrow"> -->
-      <!--   <div class="four columns"> -->
-      <!--     {% for pic in item.pics %} -->
-      <!--       <img src="http://en4s.msimav.net{{ pic }}" -->
-      <!--            width="120" height="160" /> -->
-      <!--     {% endfor %} -->
-      <!--   </div> -->
 
-      <!--   <div class="eight columns"> -->
-      <!--     <h4> {{ item.title }}</h4> -->
-      <!--   </div> -->
-      <!-- </div> -->
-      <!-- {% endfor %} -->
-
-    </div> <!-- endof outline row -->
 
   </div>
+
+
+
+  <script type="text/javascript">
+    function get_location() {
+        navigator.geolocation.getCurrentPosition(show_map);
+    }
+
+    function show_map(position) {
+        var latitude = position.coords.latitude;
+        var longitude = position.coords.longitude;
+        // let's show a map or do something interesting!
+        var map = L.mapbox.map('harita', 'jeffisabelle.map-20zh8hdu')
+            .setView([latitude, longitude], 15);
+
+
+        map.markerLayer.on('click', function(e) {
+            map.panTo(e.layer.getLatLng());
+        });
+
+        $.get('/complaint/near',
+              {'latitude': latitude, 'longitude': longitude},
+              function(data) {
+                  add_markers(map, longitude, latitude, data);
+              });
+
+        // console.log(nearcomplaints);
+    }
+
+    function add_markers(map, longitude, latitude, dataarr) {
+        var dataobjects = new Array();
+        for(var i=0; i<dataarr.length; i++) {
+            var dataobject = new Object();
+            dataobject.type = "Feature";
+            dataobject.geometry = new Object();
+            dataobject.geometry.type = "Point";
+            dataobject.geometry.coordinates = dataarr[i].location.reverse();
+            dataobject.properties = new Object();
+            dataobject.properties.title = dataarr[i].title;
+
+            dataobjects.push(dataobject)
+        }
+
+
+        for(var i=0; i<dataobjects.length; i++) {
+            console.log(dataobjects[i].properties.title);
+            console.log(dataobjects[i].geometry.coordinates);
+        }
+
+        var markerLayer = L.mapbox.markerLayer({
+            type: "FeatureCollection",
+            // features: [{
+            //     type: 'Feature',
+            //     geometry: {
+            //         type: 'Point',
+            //         // coordinates here are in longitude, latitude order because
+            //         // x, y is the standard for GeoJSON and many formats
+            //         coordinates: [longitude, latitude]
+            //     },
+            //     properties: {
+            //         title: 'A Single Marker',
+            //         description: 'Just one of me',
+            //         // one can customize markers by adding simplestyle properties
+            //         // http://mapbox.com/developers/simplestyle/
+            //         'marker-size': 'large',
+            //         'marker-color': '#f0a'
+            //     }
+            // }]
+            features: dataobjects
+        }).addTo(map);
+    }
+
+    get_location();
+
+  </script>
 </body>

@@ -1,5 +1,6 @@
 from flask import Flask, session
 from flask import render_template, redirect, request
+from flask.ext import restful
 
 from settings import db
 import settings
@@ -7,7 +8,7 @@ import pymongo
 # from bson import ObjectId
 
 app = Flask(__name__)
-
+api = restful.Api(app)
 
 @app.route('/')
 def index():
@@ -39,6 +40,37 @@ def home():
         return redirect('/')
 
 
+class ComplaintNear(restful.Resource):
+    def get(self):
+        l = []
+
+        lati = request.args.get('latitude', '')
+        longi = request.args.get('longitude', '')
+        category = request.args.get('category', '')
+        print "latitude: " + unicode(lati)
+        print "longitude: " + unicode(longi)
+
+        if category is "":
+            category = "all"
+
+        loc = [float(lati), float(longi)]
+        if category is not 'all':
+            items = db.complaint.find({"category": category,
+                                       "location": {"$near": loc}})
+        else:
+            items = db.complaint.find({"location": {"$near": loc}})
+
+        items = items[:10]      # limit 10 item
+
+        for item in items:
+            item["_id"] = unicode(item["_id"])
+            item["date"] = unicode(
+                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+            l.append(item)
+
+        return (l, 200, {"Cache-Control": "no-cache"})
+
+
 @app.route('/dashboard')
 def dashboard():
     items = db.complaint.find({"city": "Ankara"})
@@ -46,6 +78,7 @@ def dashboard():
     items.limit(10)
     return render_template('dashboard.html', items=items)
 
+api.add_resource(ComplaintNear, '/complaint/near')
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG

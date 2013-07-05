@@ -95,8 +95,10 @@ i {
     padding: 10px;
 }
 
-/* #mainrow { */
-/*     background-color: rgba(200, 200, 200, 0.15); */
-/*     border-left: 4px solid rgba(210, 210, 210, 0.15); */
-/*     border-right: 4px solid rgba(210, 210, 210, 0.15); */
-/* } */
+
+.picitem {
+    -webkit-border-radius: 30px;
+    border-radius: 30px;
+    padding: 20px 0px;
+    /* width: 80%; */
+}
