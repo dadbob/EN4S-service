@@ -44,12 +44,12 @@ p {
 }
 
 
-.boxhome {
-    padding: 10px;
-    background-color: rgba(255, 255, 255, 0.2);
-    -webkit-border-radius: 10px;
-    border-radius: 10px;
-}
+/* .boxhome { */
+/*     padding: 10px; */
+/*     background-color: rgba(255, 255, 255, 0.2); */
+/*     -webkit-border-radius: 10px; */
+/*     border-radius: 10px; */
+/* } */
 
 .box {
     margin: auto;
@@ -95,10 +95,34 @@ i {
     padding: 10px;
 }
 
+.imgHover {
+    display: block;
+    font-size: 20px;
+    line-height: 20px;
+    padding: 10px 0px;
+    position: relative;
+}
+.imgHover .hover {
+    width: 100%;
+    display: none;
+    position: absolute;
+    z-index: 2;
+}
 
-.picitem {
-    -webkit-border-radius: 30px;
-    border-radius: 30px;
-    padding: 20px 0px;
-    /* width: 80%; */
+.picdata {
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.9);
+    font-weight: 400;
+    color: #FDFDFD;
+    text-shadow: 2px 1px #010101;
+}
+
+.bot {
+    line-height: 14px;
+    font-size: 14px;
+    bottom: 10px;
+}
+
+.bot i {
+    padding: 0px;
 }

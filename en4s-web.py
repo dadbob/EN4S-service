@@ -10,6 +10,7 @@ import pymongo
 app = Flask(__name__)
 api = restful.Api(app)
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -33,7 +34,9 @@ def home():
     if session.get('logged_in'):
         items = db.complaint.find()
         items = items.sort("date", pymongo.DESCENDING)
-        items.limit(10)
+        items.limit(15)
+        # for item in items:
+        #     print type(item["upvote_count"])
 
         return render_template('home/index.html', items=items)
     else:

@@ -38,7 +38,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/gumby.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 
-  <script src="{{ url_for('static', filename='js/Chart.js') }}"></script>
 
   <script src="{{ url_for('static', filename='js/libs/modernizr-2.6.2.min.js') }}"></script>
 
@@ -51,7 +50,7 @@
     <link href='http://api.tiles.mapbox.com/mapbox.js/v1.0.3/mapbox.ie.css' rel='stylesheet' />
   <![endif]-->
   <script src='http://api.tiles.mapbox.com/mapbox.js/v1.0.3/mapbox.js'></script>
-
+  <script src="{{ url_for('static', filename='js/jquery.lazyload.min.js') }}"></script>
 
   <!-- font awesome -->
   <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css"
@@ -84,54 +83,48 @@
 
     </div>
     <br />
+
+
+    {% for tmp in items|batch(3) %}
     <div class="row">
-      <div class="four columns boxhome">
-        <h4 class="blacktext cizdir">
-          <i class="icon-time"></i>New Problems!</h4>
+      {% for item in tmp %}
+      <div class="four columns">
+        <div class="imgHover">
+          <div class="hover">
+            <div class="picdata">
+              {{ item.title }}
+            </div>
+          </div>
+          <div class="hover bot">
+            <div class="picdata">
+              <i class="icon-comments-alt"></i>
+              {{ item.upvote_count|int }} comments
+            </div>
+          </div>
 
-        <div class="imgwrap">
-          <!-- <p> {{ items.0.pics.0 }} </p> -->
-          <img src="static{{ items.9.pics.0 }}" class="picitem" alt=""/>
-          <img src="static{{ items.10.pics.0 }}" class="picitem" alt="" />
-        </div>
-      </div>
-
-      <div class="four columns boxhome">
-        <h4 class="blacktext cizdir"><i class="icon-location-arrow"></i>Near You!</h4>
-
-        <!-- <ul> -->
-        <!--   <li><i class="icon-comments-alt"></i> Yol Bozuklugu desem 2 -->
-        <!--   satirlik bi hata girsem? </li> -->
-        <!--   <li><i class="icon-comments-alt"></i> Hede Hodosu </li> -->
-        <!--   <li><i class="icon-comments-alt"></i> Milenyum Balosu</li> -->
-        <!-- </ul> -->
-
-        <div class="imgwrap">
-          <!-- <p> {{ items.0.pics.0 }} </p> -->
-          <img src="static{{ items.8.pics.0 }}" class="picitem" alt="" />
-          <img src="static{{ items.13.pics.0 }}" class="picitem" alt="" />
+          <img src="static{{ item.pics.0 }}" />
         </div>
 
       </div>
-
-      <div class="four columns boxhome">
-        <h4 class="blacktext cizdir"><i class="icon-bar-chart"></i>Top Problems!</h4>
-
-        <div class="imgwrap">
-          <!-- <p> {{ items.0.pics.0 }} </p> -->
-          <img src="static{{ items.11.pics.0 }}" class="picitem" alt=""/>
-          <img src="static{{ items.12.pics.0 }}" class="picitem" alt="" />
-        </div>
-      </div>
+      {% endfor %}
     </div>
-
-
+    {% endfor %}
 
   </div>
 
 
 
   <script type="text/javascript">
+    $(function() {
+        $(".imgHover").hover(
+            function() {
+                $(this).children("img").fadeTo(200, 0.65).end().children(".hover").show();
+            },
+            function() {
+                $(this).children("img").fadeTo(200, 1).end().children(".hover").hide();
+            });
+    });
+
     function get_location() {
         navigator.geolocation.getCurrentPosition(show_map);
     }
