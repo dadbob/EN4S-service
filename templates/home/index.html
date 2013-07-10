@@ -83,8 +83,8 @@
 
     </div>
     <br />
-
-
+    <br />
+    <br />
     {% for tmp in items|batch(3) %}
     <div class="row">
       {% for item in tmp %}
@@ -102,98 +102,41 @@
             </div>
           </div>
 
-          <img src="static{{ item.pics.0 }}" />
+          <img class="lazy"
+               src="{{ url_for('static', filename='img/loader.gif') }}"
+               data-original="static{{ item.pics.0  }}"/>
         </div>
 
       </div>
       {% endfor %}
     </div>
     {% endfor %}
-
   </div>
 
+  <div id="appstore">
+    <img src="{{ url_for('static', filename='img/app-store.png') }}" />
+  </div>
 
+  <div id="playstore">
+    <img src="{{ url_for('static', filename='img/play-store.png') }}" />
+  </div>
+
+  <script type="text/javascript"
+          src="{{ url_for('static', filename='js/mapbox.js') }}">
+  </script>
 
   <script type="text/javascript">
+
+    $("img.lazy").lazyload();
+
     $(function() {
         $(".imgHover").hover(
             function() {
-                $(this).children("img").fadeTo(200, 0.65).end().children(".hover").show();
+                $(this).children("img").fadeTo(2, 1).end().children(".hover").stop().fadeIn("fast");
             },
             function() {
-                $(this).children("img").fadeTo(200, 1).end().children(".hover").hide();
+                $(this).children("img").fadeTo(2, 1).end().children(".hover").stop().fadeOut("fast");
             });
     });
-
-    function get_location() {
-        navigator.geolocation.getCurrentPosition(show_map);
-    }
-
-    function show_map(position) {
-        var latitude = position.coords.latitude;
-        var longitude = position.coords.longitude;
-        // let's show a map or do something interesting!
-        var map = L.mapbox.map('harita', 'jeffisabelle.map-20zh8hdu')
-            .setView([latitude, longitude], 15);
-
-
-        map.markerLayer.on('click', function(e) {
-            map.panTo(e.layer.getLatLng());
-        });
-
-        $.get('/complaint/near',
-              {'latitude': latitude, 'longitude': longitude},
-              function(data) {
-                  add_markers(map, longitude, latitude, data);
-              });
-
-        // console.log(nearcomplaints);
-    }
-
-    function add_markers(map, longitude, latitude, dataarr) {
-        var dataobjects = new Array();
-        for(var i=0; i<dataarr.length; i++) {
-            var dataobject = new Object();
-            dataobject.type = "Feature";
-            dataobject.geometry = new Object();
-            dataobject.geometry.type = "Point";
-            dataobject.geometry.coordinates = dataarr[i].location.reverse();
-            dataobject.properties = new Object();
-            dataobject.properties.title = dataarr[i].title;
-
-            dataobjects.push(dataobject)
-        }
-
-
-        for(var i=0; i<dataobjects.length; i++) {
-            console.log(dataobjects[i].properties.title);
-            console.log(dataobjects[i].geometry.coordinates);
-        }
-
-        var markerLayer = L.mapbox.markerLayer({
-            type: "FeatureCollection",
-            // features: [{
-            //     type: 'Feature',
-            //     geometry: {
-            //         type: 'Point',
-            //         // coordinates here are in longitude, latitude order because
-            //         // x, y is the standard for GeoJSON and many formats
-            //         coordinates: [longitude, latitude]
-            //     },
-            //     properties: {
-            //         title: 'A Single Marker',
-            //         description: 'Just one of me',
-            //         // one can customize markers by adding simplestyle properties
-            //         // http://mapbox.com/developers/simplestyle/
-            //         'marker-size': 'large',
-            //         'marker-color': '#f0a'
-            //     }
-            // }]
-            features: dataobjects
-        }).addTo(map);
-    }
-
-    get_location();
-
   </script>
 </body>

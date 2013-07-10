@@ -101,7 +101,9 @@ i {
     line-height: 20px;
     padding: 10px 0px;
     position: relative;
+    min-height: 400px;
 }
+
 .imgHover .hover {
     width: 100%;
     display: none;
@@ -125,4 +127,24 @@ i {
 
 .bot i {
     padding: 0px;
+}
+
+#appstore {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    opacity: 0.7;
+}
+
+#playstore {
+    position: fixed;
+    bottom: 70px;
+    right: 10px;
+    opacity: 0.7;
+}
+
+.lazy {
+    display: block;
+    margin: 0 auto;
+    text-align: center;
 }
