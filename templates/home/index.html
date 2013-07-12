@@ -80,11 +80,33 @@
 
     <div class="row">
       <div id="harita"></div>
-
     </div>
-    <br />
-    <br />
-    <br />
+
+    <div class="row" style="text-align: right;
+                            padding-top: 10px;
+                            padding-bottom: 10px;">
+      <div class="medium default btn small">
+        <a href="#top">
+          <i class="icon-heart-empty"></i>
+          Top Problems
+        </a>
+      </div>
+
+      <div class="medium default btn small">
+        <a href="#nearest">
+          <i class="icon-map-marker"></i>
+          Nearest Problems
+        </a>
+      </div>
+
+      <div class="medium default btn small">
+        <a href="#newest">
+          <i class="icon-time"></i>
+          Newest Problems
+        </a>
+      </div>
+    </div>
+
     {% for tmp in items|batch(3) %}
     <div class="row">
       {% for item in tmp %}
@@ -97,8 +119,15 @@
           </div>
           <div class="hover bot">
             <div class="picdata">
-              <i class="icon-comments-alt"></i>
-              {{ item.upvote_count|int }} comments
+              <i class="icon-comments-alt"></i>{{ item.upvote_count|int }} comments
+              <br />
+              <i class="icon-user"></i> {{ item.user }}
+
+              <div class="right" style="text-align: right;">
+                <a href=""><i class="icon-twitter"></i></a>
+                <a href=""><i class="icon-facebook"></i></a>
+                <a href=""><i class="icon-google-plus"></i></a>
+              </div>
             </div>
           </div>
 

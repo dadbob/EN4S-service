@@ -119,6 +119,12 @@ i {
     text-shadow: 2px 1px #010101;
 }
 
+.picdata i {
+    color: white;
+    font-size: 15px;
+    margin: 0px 5px;
+}
+
 .bot {
     line-height: 14px;
     font-size: 14px;
