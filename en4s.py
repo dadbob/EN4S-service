@@ -273,6 +273,31 @@ class ComplaintPicture(restful.Resource):
         return {'path': str(filename)}, 201
 
 
+class ComplaintComment(restful.Resource):
+    method_decorators = [authenticate]
+
+    def put(self, obj_id):
+        data_dict = json.loads(request.data)
+        obj_id = ObjectId(unicode(obj_id))
+        complaint_obj = db.complaint.find_one({"_id": obj_id})
+        if not complaint_obj:
+            return abort(404)
+
+        comment_data = {}
+        comment_data["_id"] = ObjectId()
+        comment_data["date"] = datetime.now()
+        comment_data["author"] = data_dict["author"]
+        comment_data["text"] = data_dict["text"]
+        comment_data["like"] = 0
+        comment_data["dislike"] = 0
+
+        db.complaint.update(
+            {"_id": obj_id},
+            {"$addToSet": {"comments": comment_data}}
+        )
+        return {"success": "comment accepted"}, 202
+
+
 class ComplaintUpvote(restful.Resource):
     method_decorators = [authenticate]
 
@@ -364,6 +389,7 @@ api.add_resource(Register, '/register')
 api.add_resource(Complaint, '/complaint')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
 api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
+api.add_resource(ComplaintComment, '/complaint/<string:obj_id>/putcomment')
 api.add_resource(ComplaintRecent, '/complaint/recent')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
