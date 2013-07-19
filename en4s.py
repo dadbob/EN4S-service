@@ -273,31 +273,6 @@ class ComplaintPicture(restful.Resource):
         return {'path': str(filename)}, 201
 
 
-class ComplaintComment(restful.Resource):
-    method_decorators = [authenticate]
-
-    def put(self, obj_id):
-        data_dict = json.loads(request.data)
-        obj_id = ObjectId(unicode(obj_id))
-        complaint_obj = db.complaint.find_one({"_id": obj_id})
-        if not complaint_obj:
-            return abort(404)
-
-        comment_data = {}
-        comment_data["_id"] = ObjectId()
-        comment_data["date"] = datetime.now()
-        comment_data["author"] = data_dict["author"]
-        comment_data["text"] = data_dict["text"]
-        comment_data["like"] = 0
-        comment_data["dislike"] = 0
-
-        db.complaint.update(
-            {"_id": obj_id},
-            {"$addToSet": {"comments": comment_data}}
-        )
-        return {"success": "comment accepted"}, 202
-
-
 class ComplaintUpvote(restful.Resource):
     method_decorators = [authenticate]
 
@@ -383,18 +358,61 @@ def byte_array_to_file(array, city, h):
     return new_url
 
 
+class CommentsNew(restful.Resource):
+    method_decorators = [authenticate]
+
+    def put(self, obj_id):
+        data_dict = json.loads(request.data)
+
+        obj_id = ObjectId(unicode(obj_id))
+        complaint_obj = db.complaint.find_one({"_id": obj_id})
+        if not complaint_obj:
+            return abort(404)
+
+        comment_data = {}
+        comment_data["_id"] = ObjectId()
+        comment_data["date"] = datetime.now()
+        comment_data["author"] = data_dict["author"]
+        comment_data["text"] = data_dict["text"]
+        comment_data["like"] = 0
+        comment_data["dislike"] = 0
+
+        db.complaint.update(
+            {"_id": obj_id},
+            {"$addToSet": {"comments": comment_data}}
+        )
+        return {"success": "comment accepted"}, 202
+
+
+class Comments(restful.Resource):
+    def get(self, obj_id):
+        obj_id = ObjectId(unicode(obj_id))
+        complaint_obj = db.complaint.find_one({"_id": obj_id})
+        if not complaint_obj:
+            return abort(404)
+
+        comments = []
+        for comment in complaint_obj["comments"]:
+            try:
+                comment["date"] = str(comment["date"])
+                comment["_id"] = str(comment["_id"])
+                comments.append(comment)
+            except:
+                pass
+        return comments, 201
+
 api.add_resource(Home, '/')
 api.add_resource(Login, '/login')
 api.add_resource(Register, '/register')
 api.add_resource(Complaint, '/complaint')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
 api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
-api.add_resource(ComplaintComment, '/complaint/<string:obj_id>/putcomment')
 api.add_resource(ComplaintRecent, '/complaint/recent')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
-
+api.add_resource(Comments, '/comments/<string:obj_id>')
+api.add_resource(CommentsNew, '/comments/<string:obj_id>')
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG
