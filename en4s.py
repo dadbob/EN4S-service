@@ -361,10 +361,10 @@ def byte_array_to_file(array, city, h):
 class CommentsNew(restful.Resource):
     method_decorators = [authenticate]
 
-    def put(self, obj_id):
+    def put(self, complaint_id):
         data_dict = json.loads(request.data)
 
-        obj_id = ObjectId(unicode(obj_id))
+        obj_id = ObjectId(unicode(complaint_id))
         complaint_obj = db.complaint.find_one({"_id": obj_id})
         if not complaint_obj:
             return abort(404)
@@ -374,7 +374,7 @@ class CommentsNew(restful.Resource):
         comment_data["date"] = datetime.now()
         comment_data["author"] = data_dict["author"]
         comment_data["text"] = data_dict["text"]
-        comment_data["like"] = 0
+        comment_data["like"] = 1
         comment_data["dislike"] = 0
 
         db.complaint.update(
@@ -384,9 +384,34 @@ class CommentsNew(restful.Resource):
         return {"success": "comment accepted"}, 202
 
 
+class CommentsUpvote(restful.Resource):
+    method_decorators = [authenticate]
+
+    def put(self, complaint_id):
+        data_dict = json.loads(request.data)
+
+        obj_id = ObjectId(unicode(complaint_id))
+        complaint_obj = db.complaint.find_one({"_id": obj_id})
+        if not complaint_obj:
+            return abort(404)
+
+        comment_id = data_dict["comment_id"]
+        for comment in complaint_obj["comments"]:
+            print comment["_id"]
+            print comment_id
+            if str(comment["_id"]) == str(comment_id):
+                like_count = int(comment["like"])
+                like_count += 1
+                comment["like"] = like_count
+                db.complaint.save(complaint_obj)
+                return {"success": "upvote accepted"}, 202
+
+        return abort(404)
+
+
 class Comments(restful.Resource):
-    def get(self, obj_id):
-        obj_id = ObjectId(unicode(obj_id))
+    def get(self, complaint_id):
+        obj_id = ObjectId(unicode(complaint_id))
         complaint_obj = db.complaint.find_one({"_id": obj_id})
         if not complaint_obj:
             return abort(404)
@@ -411,8 +436,9 @@ api.add_resource(ComplaintRecent, '/complaint/recent')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
-api.add_resource(Comments, '/comments/<string:obj_id>')
-api.add_resource(CommentsNew, '/comments/<string:obj_id>')
+api.add_resource(Comments, '/comments/<string:complaint_id>')
+api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
+api.add_resource(CommentsUpvote, '/comments/up/<string:complaint_id>')
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG
