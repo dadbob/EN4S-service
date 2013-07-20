@@ -374,7 +374,7 @@ class CommentsNew(restful.Resource):
         comment_data["date"] = datetime.now()
         comment_data["author"] = data_dict["author"]
         comment_data["text"] = data_dict["text"]
-        comment_data["like"] = 1
+        comment_data["like"] = 0
         comment_data["dislike"] = 0
 
         db.complaint.update(
@@ -384,7 +384,7 @@ class CommentsNew(restful.Resource):
         return {"success": "comment accepted"}, 202
 
 
-class CommentsUpvote(restful.Resource):
+class CommentsVote(restful.Resource):
     method_decorators = [authenticate]
 
     def put(self, complaint_id):
@@ -396,12 +396,17 @@ class CommentsUpvote(restful.Resource):
             return abort(404)
 
         comment_id = data_dict["comment_id"]
+        vote_type = data_dict["vote_type"]
+
         for comment in complaint_obj["comments"]:
             print comment["_id"]
             print comment_id
             if str(comment["_id"]) == str(comment_id):
                 like_count = int(comment["like"])
-                like_count += 1
+                if vote_type == "upvote":
+                    like_count += 1
+                elif vote_type == "downvote":
+                    like_count -= 1
                 comment["like"] = like_count
                 db.complaint.save(complaint_obj)
                 return {"success": "upvote accepted"}, 202
@@ -438,7 +443,8 @@ api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
 api.add_resource(Comments, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
-api.add_resource(CommentsUpvote, '/comments/up/<string:complaint_id>')
+api.add_resource(CommentsVote, '/comments/vote/<string:complaint_id>')
+
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG
