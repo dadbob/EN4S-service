@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import geopy
+import requests
 import geopy.distance
 from datetime import datetime
 from functools import wraps
@@ -59,7 +60,7 @@ class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
         user = db.users.find_one(
-            {"username": unicode(data_dict['username'])}
+            {"userid": unicode(data_dict['userid'])}
         )
 
         if not user:
@@ -72,6 +73,48 @@ class Login(restful.Resource):
             print "SESSION LOGIN logged_in value: " + \
                 unicode(session.get('logged_in'))
             return {'success': 'logged in'}, 200
+
+
+class FacebookLogin(restful.Resource):
+    def post(self):
+        data_dict = json.loads(request.data)
+        userid = data_dict['userid']
+        access_token = data_dict['access_token']
+
+        url = "https://graph.facebook.com/me?access_token=" + access_token
+        r = requests.get(url)
+        if r.status_code != 200:
+            return {'error': 'cont login with facebook'}, 400
+        else:
+            user = db.users.find_one(
+                {"userid": userid}
+            )
+
+            if not user:
+                json_data = r.json()
+                try:
+                    print "here"
+                    db.users.insert(
+                        {
+                            "username": json_data["username"],
+                            "userid": json_data["id"],
+                            "first_name": json_data["first_name"],
+                            "last_name": json_data["last_name"],
+                            "name": json_data["name"],
+                            "fb": 1
+                        }
+                    )
+
+                    user = db.users.find_one()
+                    session['user'] = user
+                    session['logged_in'] = True
+                    return {'success': "logged in"}, 200
+                except:
+                    return {'error': 'cont login with facebook. here'}, 400
+            else:
+                session['user'] = user
+                session['logged_in'] = True
+                return {'success': 'logged in'}, 200
 
 
 class Register(restful.Resource):
@@ -91,8 +134,10 @@ class Register(restful.Resource):
                 db.users.insert(
                     {
                         "username": username,
+                        "userid": username,
                         "password": password,
-                        "email": email
+                        "email": email,
+                        "fb": 0
                     }
                 )
                 return {'success': "registered successfuly"}, 201
@@ -433,6 +478,7 @@ class Comments(restful.Resource):
 
 api.add_resource(Home, '/')
 api.add_resource(Login, '/login')
+api.add_resource(FacebookLogin, '/login/facebook')
 api.add_resource(Register, '/register')
 api.add_resource(Complaint, '/complaint')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
