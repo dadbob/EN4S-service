@@ -130,10 +130,11 @@
               </div>
             </div>
           </div>
-
-          <img class="lazy"
-               src="{{ url_for('static', filename='img/loader.gif') }}"
-               data-original="static{{ item.pics.0  }}"/>
+          <a href="/complaint/{{ item._id }}">
+            <img class="lazy"
+                 src="{{ url_for('static', filename='img/loader.gif') }}"
+                 data-original="static{{ item.pics.0  }}"/>
+          </a>
         </div>
 
       </div>

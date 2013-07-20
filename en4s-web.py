@@ -5,7 +5,7 @@ from flask.ext import restful
 from settings import db
 import settings
 import pymongo
-# from bson import ObjectId
+from bson import ObjectId
 
 app = Flask(__name__)
 api = restful.Api(app)
@@ -39,7 +39,18 @@ def home():
         #     print type(item["upvote_count"])
 
         return render_template('home/index.html', items=items)
-    else:
+    else:                       # beta pass not given
+        return redirect('/')
+
+
+@app.route('/complaint/<string:complaint_id>')
+def detail(complaint_id):
+    if session.get('logged_in'):
+        obj_id = ObjectId(unicode(complaint_id))
+        complaint = db.complaint.find_one({"_id": obj_id})
+
+        return render_template('home/detail.html', complaint=complaint)
+    else:                       # beta pass not given
         return redirect('/')
 
 
