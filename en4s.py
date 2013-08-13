@@ -41,21 +41,6 @@ def authenticate(func):
     return wrapper
 
 
-@app.route('/apidocs')
-def Docs():
-    return render_template('users.html')
-
-
-@app.route('/apidocs/users')
-def DocsUsers():
-    return render_template('users.html')
-
-
-@app.route('/apidocs/complaints')
-def DocsComplaints():
-    return render_template('complaints.html')
-
-
 class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
@@ -93,7 +78,6 @@ class FacebookLogin(restful.Resource):
             if not user:
                 json_data = r.json()
                 try:
-                    print "here"
                     db.users.insert(
                         {
                             "username": json_data["username"],
@@ -110,7 +94,7 @@ class FacebookLogin(restful.Resource):
                     session['logged_in'] = True
                     return {'success': "logged in"}, 200
                 except:
-                    return {'error': 'cont login with facebook. here'}, 400
+                    return {'error': 'cont login with facebook'}, 400
             else:
                 session['user'] = user
                 session['logged_in'] = True
