@@ -8,7 +8,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import Flask, request, session
-from flask import abort, render_template
+from flask import abort
 from flask.ext import restful
 
 from settings import db
