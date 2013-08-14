@@ -376,7 +376,7 @@ def byte_array_to_file(array, city, h):
     file.close()
 
     try:
-        for size in [(128, 1000), (256, 1000), (512, 1000)]:
+        for size in [(512, 1000)]:
             thumbnail_path = IMAGEFOLDER + city + "/" + h + "." + str(size[0]) + ".jpg"
             im = Image.open(new_filename)
             im.thumbnail(size, Image.ANTIALIAS)
