@@ -45,7 +45,8 @@ class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
         user = db.users.find_one(
-            {"userid": unicode(data_dict['userid'])}
+            # TODO: username ler yerine userid'lerle kontrol et
+            {"username": unicode(data_dict['username'])}
         )
 
         if not user:
@@ -153,7 +154,7 @@ class ComplaintRecent(restful.Resource):
         else:
             items = db.complaint.find().sort("date", pymongo.DESCENDING)
 
-        items = items[:10]      # limit 10 item
+        items = items[:12]      # limit 10 item
 
         for item in items:
             item["_id"] = unicode(item["_id"])
@@ -179,7 +180,7 @@ class ComplaintTop(restful.Resource):
             items = db.complaint.find().sort("upvote_count",
                                              pymongo.DESCENDING)
 
-        items = items[:10]      # limit 10 item
+        items = items[:12]      # limit 10 item
 
         for item in items:
             item["_id"] = unicode(item["_id"])
@@ -213,7 +214,7 @@ class ComplaintNear(restful.Resource):
         else:
             items = db.complaint.find({"location": {"$near": loc}})
 
-        items = items[:10]      # limit 10 item
+        items = items[:12]      # limit 10 item
 
         for item in items:
             item["_id"] = unicode(item["_id"])
