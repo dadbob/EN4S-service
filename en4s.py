@@ -366,7 +366,6 @@ class ComplaintUpvote(restful.Resource):
 
 
 class ComplaintSingle(restful.Resource):
-    # implement this
     def get(self, obj_id):
         obj_id = ObjectId(unicode(obj_id))
         obj = db.complaint.find_one({"_id": obj_id})
@@ -376,6 +375,26 @@ class ComplaintSingle(restful.Resource):
         if not obj:
             return abort(404)
         return obj
+
+    # TODO: This must authenticate admin in a proper way!
+    def post(self, obj_id):
+
+        picpath = request.form["picpath"]
+        pw = request.form["pw"]
+
+        picpath512 = picpath.replace(".jpg", ".512.jpg")
+        path = "/srv/flask/en4s/uploads"
+
+        if pw == settings.ADMINPASS:
+            obj_id = ObjectId(unicode(obj_id))
+            db.complaint.remove({"_id": obj_id})
+            if picpath:
+                os.remove(path + picpath)
+                os.remove(path + picpath512)
+            # print db.complaint.find_one({"_id": obj_id})
+            return {"success": "content deleted"}, 204
+        else:
+            return abort(404)
 
 
 def byte_array_to_file(array, city, h):
