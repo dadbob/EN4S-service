@@ -165,6 +165,29 @@ class ComplaintRecent(restful.Resource):
         return (l, 200, {"Cache-Control": "no-cache"})
 
 
+class ComplaintAll(restful.Resource):
+    def get(self):
+        l = []
+        category = request.args.get('category', '')
+
+        if category is "":
+            category = "all"
+
+        if category is not 'all':
+            items = db.complaint.find({"category": category})
+            items = items.sort("date", pymongo.DESCENDING)
+        else:
+            items = db.complaint.find().sort("date", pymongo.DESCENDING)
+
+        for item in items:
+            item["_id"] = unicode(item["_id"])
+            item["date"] = unicode(
+                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+            l.append(item)
+
+        return (l, 200, {"Cache-Control": "no-cache"})
+
+
 class ComplaintTop(restful.Resource):
     def get(self):
         l = []
@@ -469,6 +492,7 @@ api.add_resource(Complaint, '/complaint')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
 api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
 api.add_resource(ComplaintRecent, '/complaint/recent')
+api.add_resource(ComplaintAll, '/complaint/all')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
