@@ -160,6 +160,12 @@ class ComplaintRecent(restful.Resource):
             item["_id"] = unicode(item["_id"])
             item["date"] = unicode(
                 item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
+            if "comments" in item:
+                for comment in item["comments"]:
+                    comment["_id"] = unicode(comment["_id"])
+                    comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -183,6 +189,12 @@ class ComplaintAll(restful.Resource):
             item["_id"] = unicode(item["_id"])
             item["date"] = unicode(
                 item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
+            if "comments" in item:
+                for comment in item["comments"]:
+                    comment["_id"] = unicode(comment["_id"])
+                    comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -209,6 +221,12 @@ class ComplaintTop(restful.Resource):
             item["_id"] = unicode(item["_id"])
             item["date"] = unicode(
                 item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
+            if "comments" in item:
+                for comment in item["comments"]:
+                    comment["_id"] = unicode(comment["_id"])
+                    comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -243,6 +261,12 @@ class ComplaintNear(restful.Resource):
             item["_id"] = unicode(item["_id"])
             item["date"] = unicode(
                 item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
+            if "comments" in item:
+                for comment in item["comments"]:
+                    comment["_id"] = unicode(comment["_id"])
+                    comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -372,6 +396,12 @@ class ComplaintSingle(restful.Resource):
         obj["_id"] = unicode(obj["_id"])
         obj["date"] = unicode(obj["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
 
+        if "comments" in obj:
+            for comment in obj["comments"]:
+                comment["_id"] = unicode(comment["_id"])
+                comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
+
         if not obj:
             return abort(404)
         return obj
@@ -435,6 +465,7 @@ class CommentsNew(restful.Resource):
 
     def put(self, complaint_id):
         data_dict = json.loads(request.data)
+        user = session.get("user")
 
         obj_id = ObjectId(unicode(complaint_id))
         complaint_obj = db.complaint.find_one({"_id": obj_id})
@@ -444,7 +475,7 @@ class CommentsNew(restful.Resource):
         comment_data = {}
         comment_data["_id"] = ObjectId()
         comment_data["date"] = datetime.now()
-        comment_data["author"] = data_dict["author"]
+        comment_data["author"] = user["username"]
         comment_data["text"] = data_dict["text"]
         comment_data["like"] = 0
         comment_data["dislike"] = 0
@@ -494,6 +525,7 @@ class Comments(restful.Resource):
             return abort(404)
 
         comments = []
+
         for comment in complaint_obj["comments"]:
             try:
                 comment["date"] = str(comment["date"])
@@ -501,7 +533,7 @@ class Comments(restful.Resource):
                 comments.append(comment)
             except:
                 pass
-        return comments, 201
+        return comments, 200
 
 api.add_resource(Home, '/')
 api.add_resource(Login, '/login')
