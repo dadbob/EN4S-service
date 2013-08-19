@@ -45,26 +45,29 @@ class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
         user = db.users.find_one(
-            # TODO: username ler yerine userid'lerle kontrol et
-            {"username": unicode(data_dict['username'])}
+            {"email": unicode(data_dict['email'])}
         )
 
         if not user:
             return {'error': 'user not found'}, 404
-        if data_dict['password'] != unicode(data_dict["password"]):
+
+        if user['password'] != unicode(data_dict["password"]):
             return {'error': 'password is invalid'}, 404
         else:
+            user.pop("password", None)
             session['user'] = user
             session['logged_in'] = True
             print "SESSION LOGIN logged_in value: " + \
                 unicode(session.get('logged_in'))
-            return {'success': 'logged in'}, 200
+
+            user = serialize_user(user)
+            return user, 200
 
 
 class FacebookLogin(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
-        userid = data_dict['userid']
+        email = data_dict['email']
         access_token = data_dict['access_token']
 
         url = "https://graph.facebook.com/me?access_token=" + access_token
@@ -73,7 +76,7 @@ class FacebookLogin(restful.Resource):
             return {'error': 'cont login with facebook'}, 400
         else:
             user = db.users.find_one(
-                {"userid": userid}
+                {"email": email}
             )
 
             if not user:
@@ -81,11 +84,11 @@ class FacebookLogin(restful.Resource):
                 try:
                     db.users.insert(
                         {
-                            "username": json_data["username"],
-                            "userid": json_data["id"],
+                            "email": json_data["email"],
                             "first_name": json_data["first_name"],
                             "last_name": json_data["last_name"],
                             "name": json_data["name"],
+                            "fbusername": json_data["username"],
                             "fb": 1
                         }
                     )
@@ -93,13 +96,15 @@ class FacebookLogin(restful.Resource):
                     user = db.users.find_one()
                     session['user'] = user
                     session['logged_in'] = True
-                    return {'success': "logged in"}, 200
+                    user["_id"] = unicode(user["_id"])
+                    return user, 200
                 except:
                     return {'error': 'cont login with facebook'}, 400
             else:
                 session['user'] = user
                 session['logged_in'] = True
-                return {'success': 'logged in'}, 200
+                user["_id"] = unicode(user["_id"])
+                return user, 200
 
 
 class Register(restful.Resource):
@@ -108,20 +113,23 @@ class Register(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
 
-        username = unicode(data_dict['username'])
-        password = unicode(data_dict['password'])
         email = unicode(data_dict['email'])
+        first_name = unicode(data_dict['first_name'])
+        last_name = unicode(data_dict['last_name'])
+        name = first_name + last_name
+        password = unicode(data_dict['password'])
 
-        if not (username or password):
-            return {'error': 'username or password not given'}, 404
+        if not (email or password):
+            return {'error': 'email or password not given'}, 404
         else:
             try:
                 db.users.insert(
                     {
-                        "username": username,
-                        "userid": username,
-                        "password": password,
                         "email": email,
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "name": name,
+                        "password": password,
                         "fb": 0
                     }
                 )
@@ -157,15 +165,9 @@ class ComplaintRecent(restful.Resource):
         items = items[:12]      # limit 10 item
 
         for item in items:
-            item["_id"] = unicode(item["_id"])
-            item["date"] = unicode(
-                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
-            if "comments" in item:
-                for comment in item["comments"]:
-                    comment["_id"] = unicode(comment["_id"])
-                    comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
+            item = serialize_complaint(item)
+            item["user"] = db.users.find_one({"_id": item["user"]})
+            item["user"] = serialize_user(item["user"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -186,15 +188,9 @@ class ComplaintAll(restful.Resource):
             items = db.complaint.find().sort("date", pymongo.DESCENDING)
 
         for item in items:
-            item["_id"] = unicode(item["_id"])
-            item["date"] = unicode(
-                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
-            if "comments" in item:
-                for comment in item["comments"]:
-                    comment["_id"] = unicode(comment["_id"])
-                    comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
+            item = serialize_complaint(item)
+            item["user"] = db.users.find_one({"_id": item["user"]})
+            item["user"] = serialize_user(item["user"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -218,22 +214,15 @@ class ComplaintTop(restful.Resource):
         items = items[:12]      # limit 10 item
 
         for item in items:
-            item["_id"] = unicode(item["_id"])
-            item["date"] = unicode(
-                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
-            if "comments" in item:
-                for comment in item["comments"]:
-                    comment["_id"] = unicode(comment["_id"])
-                    comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
+            item = serialize_complaint(item)
+            item["user"] = db.users.find_one({"_id": item["user"]})
+            item["user"] = serialize_user(item["user"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
 
 
 class ComplaintNear(restful.Resource):
-
     method_decorators = [authenticate]
 
     def get(self):
@@ -242,8 +231,6 @@ class ComplaintNear(restful.Resource):
         lati = request.args.get('latitude', '')
         longi = request.args.get('longitude', '')
         category = request.args.get('category', '')
-        print "latitude: " + unicode(lati)
-        print "longitude: " + unicode(longi)
 
         if category is "":
             category = "all"
@@ -258,15 +245,9 @@ class ComplaintNear(restful.Resource):
         items = items[:12]      # limit 10 item
 
         for item in items:
-            item["_id"] = unicode(item["_id"])
-            item["date"] = unicode(
-                item["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
-            if "comments" in item:
-                for comment in item["comments"]:
-                    comment["_id"] = unicode(comment["_id"])
-                    comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
+            item = serialize_complaint(item)
+            item["user"] = db.users.find_one({"_id": item["user"]})
+            item["user"] = serialize_user(item["user"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
@@ -297,7 +278,7 @@ class Complaint(restful.Resource):
         data_dict = json.loads(request.data.decode("utf-8"))
         print "debug new complaint post here 2"
 
-        username = unicode(user["username"])
+        userid = unicode(user["_id"])
         category = unicode(data_dict['category'])
         location = data_dict['location']
         address = unicode(data_dict['address'])
@@ -306,10 +287,11 @@ class Complaint(restful.Resource):
 
         new_complaint = {
             "title": title,
-            "user": username,
+            "user": userid,
             "pics": [],
             "category": category,
-            "upvoters": [user["username"]],
+            "comments": [],
+            "upvoters": [user["_id"]],
             "upvote_count": 1,
             "downvote_count": 0,
             "location": location,
@@ -319,6 +301,7 @@ class Complaint(restful.Resource):
         }
 
         db.complaint.insert(new_complaint)
+        new_complaint["user"] = unicode(new_complaint["user"])
         new_complaint["_id"] = unicode(new_complaint["_id"])
         new_complaint["date"] = unicode(new_complaint["date"])
 
@@ -361,7 +344,7 @@ class ComplaintUpvote(restful.Resource):
             return abort(404)
 
         upvoters = obj["upvoters"]
-        if session["user"]["username"] in upvoters:
+        if session["user"]["_id"] in upvoters:
             return {"error": "user already upvoted"}, 406
 
         comp_lati = obj["location"][0]
@@ -381,7 +364,7 @@ class ComplaintUpvote(restful.Resource):
         else:
             db.complaint.update(
                 {"_id": obj_id},
-                {"$addToSet": {"upvoters": session["user"]["username"]}}
+                {"$addToSet": {"upvoters": session["user"]["_id"]}}
             )
             db.complaint.update(
                 {"_id": obj_id}, {"$inc": {"upvote_count": 1}}
@@ -393,14 +376,9 @@ class ComplaintSingle(restful.Resource):
     def get(self, obj_id):
         obj_id = ObjectId(unicode(obj_id))
         obj = db.complaint.find_one({"_id": obj_id})
-        obj["_id"] = unicode(obj["_id"])
-        obj["date"] = unicode(obj["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
-        if "comments" in obj:
-            for comment in obj["comments"]:
-                comment["_id"] = unicode(comment["_id"])
-                comment["date"] = unicode(comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
+        obj = serialize_complaint(obj)
+        obj["user"] = db.users.find_one({"_id": obj["user"]})
+        obj["user"] = serialize_user(obj["user"])
 
         if not obj:
             return abort(404)
@@ -427,39 +405,6 @@ class ComplaintSingle(restful.Resource):
             return abort(404)
 
 
-def byte_array_to_file(array, city, h):
-    IMAGEFOLDER = "/srv/flask/en4s/uploads/pics/"
-    URL = "/pics/"
-
-    try:
-        os.makedirs(IMAGEFOLDER + city + "/")
-    except:
-        pass
-
-    # new_filename = IMAGEFOLDER + city + "/" +\
-    #            hashlib.sha256(unicode(array)).hexdigest() + ".jpg"
-
-    new_filename = IMAGEFOLDER + city + "/" + h + ".jpg"
-    new_url = URL + city + "/" + h + ".jpg"
-
-    array = base64.b64decode(array)
-
-    file = open(new_filename, "wb")
-    file.write(array)
-    file.close()
-
-    try:
-        for size in [(512, 1000)]:
-            thumbnail_path = IMAGEFOLDER + city + "/" + h + "." + str(size[0]) + ".jpg"
-            im = Image.open(new_filename)
-            im.thumbnail(size, Image.ANTIALIAS)
-            im.save(thumbnail_path, "JPEG")
-    except:
-        print "couldn't save the thumbnails. sorry"
-
-    return new_url
-
-
 class CommentsNew(restful.Resource):
     method_decorators = [authenticate]
 
@@ -475,7 +420,7 @@ class CommentsNew(restful.Resource):
         comment_data = {}
         comment_data["_id"] = ObjectId()
         comment_data["date"] = datetime.now()
-        comment_data["author"] = user["username"]
+        comment_data["author"] = user["_id"]
         comment_data["text"] = data_dict["text"]
         comment_data["like"] = 0
         comment_data["dislike"] = 0
@@ -534,6 +479,70 @@ class Comments(restful.Resource):
             except:
                 pass
         return comments, 200
+
+
+def byte_array_to_file(array, city, h):
+    IMAGEFOLDER = "/srv/flask/en4s/uploads/pics/"
+    URL = "/pics/"
+
+    try:
+        os.makedirs(IMAGEFOLDER + city + "/")
+    except:
+        pass
+
+    # new_filename = IMAGEFOLDER + city + "/" +\
+    #            hashlib.sha256(unicode(array)).hexdigest() + ".jpg"
+
+    new_filename = IMAGEFOLDER + city + "/" + h + ".jpg"
+    new_url = URL + city + "/" + h + ".jpg"
+
+    array = base64.b64decode(array)
+
+    file = open(new_filename, "wb")
+    file.write(array)
+    file.close()
+
+    try:
+        for size in [(512, 1000)]:
+            thumbnail_path = IMAGEFOLDER + city + "/" + h + "." + str(size[0]) + ".jpg"
+            im = Image.open(new_filename)
+            im.thumbnail(size, Image.ANTIALIAS)
+            im.save(thumbnail_path, "JPEG")
+    except:
+        print "couldn't save the thumbnails. sorry"
+
+    return new_url
+
+
+def serialize_complaint(item):
+    obj = item
+
+    obj["_id"] = unicode(obj["_id"])
+    obj["date"] = unicode(obj["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
+
+    if "upvoters" in obj:
+        serialized_upvoters = []
+        for upvoter in obj["upvoters"]:
+            serialized_upvoters.append(unicode(upvoter))
+
+        obj["upvoters"] = serialized_upvoters
+
+    if "comments" in obj:
+        for comment in obj["comments"]:
+            comment["_id"] = unicode(comment["_id"])
+            comment["date"] = unicode(
+                comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f")
+            )
+
+    return obj
+
+
+def serialize_user(item):
+    obj = item
+    obj.pop("password", None)
+    obj["_id"] = unicode(obj["_id"])
+    return obj
+
 
 api.add_resource(Home, '/')
 api.add_resource(Login, '/login')
