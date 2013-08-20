@@ -223,7 +223,7 @@ class ComplaintTop(restful.Resource):
 
 
 class ComplaintNear(restful.Resource):
-    method_decorators = [authenticate]
+    # method_decorators = [authenticate]
 
     def get(self):
         l = []
