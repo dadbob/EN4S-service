@@ -19,6 +19,9 @@ from bson import ObjectId
 # resize
 from PIL import Image
 
+# utils
+from serviceutils import make_slug, serialize_user, serialize_complaint
+
 app = Flask(__name__)
 api = restful.Api(app)
 
@@ -271,24 +274,25 @@ class Complaint(restful.Resource):
 
     def post(self):
         user = session["user"]
-        d = request.data
-
-        print "debug new complaint post here"
-        print d
         data_dict = json.loads(request.data.decode("utf-8"))
-        print "debug new complaint post here 2"
 
-        userid = unicode(user["_id"])
+        # userid = unicode(user["_id"])
         category = unicode(data_dict['category'])
         location = data_dict['location']
         address = unicode(data_dict['address'])
         city = unicode(data_dict['city'])
         title = unicode(data_dict['title'])
+        complaint_id = ObjectId()
+        slug_city = make_slug(city)
+        slug_title = make_slug(title)
+        public_url = "/complaint/" + slug_city + "/" + slug_title + "/" + str(unicode(complaint_id))
 
         new_complaint = {
+            "_id": complaint_id,
             "title": title,
-            "user": userid,
+            "user": ObjectId(user["_id"]),
             "pics": [],
+            "public_url": public_url,
             "category": category,
             "comments": [],
             "upvoters": [user["_id"]],
@@ -300,11 +304,18 @@ class Complaint(restful.Resource):
             "date": datetime.now()
         }
 
+        user = session.get("user")
+
         db.complaint.insert(new_complaint)
-        new_complaint["user"] = unicode(new_complaint["user"])
+        new_complaint["_id"] = unicode(complaint_id)
+        new_complaint["user"] = user
+        new_complaint["user"]["_id"] = unicode(user["_id"])
         new_complaint["_id"] = unicode(new_complaint["_id"])
         new_complaint["date"] = unicode(new_complaint["date"])
-
+        new_complaint["upvoters"][0] = unicode(new_complaint["upvoters"][0])
+        print "[debug] before return new complaint"
+        print "new complaint: "
+        print new_complaint
         return new_complaint, 201
 
 
@@ -512,36 +523,6 @@ def byte_array_to_file(array, city, h):
         print "couldn't save the thumbnails. sorry"
 
     return new_url
-
-
-def serialize_complaint(item):
-    obj = item
-
-    obj["_id"] = unicode(obj["_id"])
-    obj["date"] = unicode(obj["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-
-    if "upvoters" in obj:
-        serialized_upvoters = []
-        for upvoter in obj["upvoters"]:
-            serialized_upvoters.append(unicode(upvoter))
-
-        obj["upvoters"] = serialized_upvoters
-
-    if "comments" in obj:
-        for comment in obj["comments"]:
-            comment["_id"] = unicode(comment["_id"])
-            comment["date"] = unicode(
-                comment["date"].strftime("%Y-%m-%d %H:%M:%S.%f")
-            )
-
-    return obj
-
-
-def serialize_user(item):
-    obj = item
-    obj.pop("password", None)
-    obj["_id"] = unicode(obj["_id"])
-    return obj
 
 
 api.add_resource(Home, '/')
