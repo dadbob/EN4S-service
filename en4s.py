@@ -21,7 +21,8 @@ from bson import ObjectId
 from PIL import Image
 
 # utils
-from serviceutils import make_slug, serialize_user, serialize_complaint
+from serviceutils import serialize_user, serialize_complaint
+from serviceutils import check_mail, make_slug
 
 app = Flask(__name__)
 api = restful.Api(app)
@@ -119,27 +120,32 @@ class Register(restful.Resource):
         email = unicode(data_dict['email'])
         first_name = unicode(data_dict['first_name'])
         last_name = unicode(data_dict['last_name'])
-        name = first_name + last_name
+        name = first_name + " " + last_name
         password = unicode(data_dict['password'])
         password = bcrypt.hashpw(password, bcrypt.gensalt())
+
+        user = {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "name": name,
+            "password": password,
+            "fb": 0
+        }
 
         if not (email or password):
             return {'error': 'email or password not given'}, 404
         else:
-            try:
-                db.users.insert(
-                    {
-                        "email": email,
-                        "first_name": first_name,
-                        "last_name": last_name,
-                        "name": name,
-                        "password": password,
-                        "fb": 0
-                    }
-                )
-                return {'success': "registered successfuly"}, 201
-            except:
-                return {'error': "can't register"}, 404
+            if check_mail(email):
+                try:
+                    db.users.insert(user)
+                    user.pop("password", None)
+                    user = serialize_user(user)
+                    return user, 201
+                except:
+                    return {'error': "can't register"}, 404
+            else:
+                return {'error': "mail address is not valid"}, 404
 
 
 class Home(restful.Resource):

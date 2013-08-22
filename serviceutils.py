@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import slugify
+import re
 
 
 def make_slug(text):
@@ -35,3 +36,15 @@ def serialize_user(item):
         obj.pop("password", None)
         obj["_id"] = unicode(obj["_id"])
     return obj
+
+
+def check_mail(text):
+    reg = re.compile(
+        '[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})'
+    )
+
+    regMail = reg.match(text)
+    if not regMail:
+        return False
+    else:
+        return True
