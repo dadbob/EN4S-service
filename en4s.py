@@ -3,6 +3,7 @@ import json
 import base64
 import geopy
 import requests
+import bcrypt
 import geopy.distance
 from datetime import datetime
 from functools import wraps
@@ -54,15 +55,14 @@ class Login(restful.Resource):
         if not user:
             return {'error': 'user not found'}, 404
 
-        if user['password'] != unicode(data_dict["password"]):
+        pwd = unicode(data_dict["password"])
+        pwd_hash = user["password"]
+        if bcrypt.hashpw(pwd, pwd_hash) != pwd_hash:
             return {'error': 'password is invalid'}, 404
         else:
             user.pop("password", None)
             session['user'] = user
             session['logged_in'] = True
-            print "SESSION LOGIN logged_in value: " + \
-                unicode(session.get('logged_in'))
-
             user = serialize_user(user)
             return user, 200
 
@@ -121,6 +121,7 @@ class Register(restful.Resource):
         last_name = unicode(data_dict['last_name'])
         name = first_name + last_name
         password = unicode(data_dict['password'])
+        password = bcrypt.hashpw(password, bcrypt.gensalt())
 
         if not (email or password):
             return {'error': 'email or password not given'}, 404
