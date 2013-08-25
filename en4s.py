@@ -68,6 +68,16 @@ class Login(restful.Resource):
             return user, 200
 
 
+class Logout(restful.Resource):
+    def post(self):
+
+        session['user'] = None
+        session['logged_in'] = False
+        return {"success": "successfuly logged out"}, 200
+
+            # return {"error": "something bad happened"}, 404
+
+
 class FacebookLogin(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
@@ -97,7 +107,7 @@ class FacebookLogin(restful.Resource):
                         }
                     )
 
-                    user = db.users.find_one()
+                    user = db.users.find_one({"email": json_data["email"]})
                     session['user'] = user
                     session['logged_in'] = True
                     user["_id"] = unicode(user["_id"])
@@ -140,6 +150,8 @@ class Register(restful.Resource):
                 try:
                     db.users.insert(user)
                     user.pop("password", None)
+                    session["user"] = user
+                    session["logged_in"] = True
                     user = serialize_user(user)
                     return user, 201
                 except:
@@ -365,41 +377,49 @@ class ComplaintUpvote(restful.Resource):
         if session["user"]["_id"] in upvoters:
             return {"error": "user already upvoted"}, 406
 
-        comp_lati = obj["location"][0]
-        comp_longi = obj["location"][1]
+        # comp_lati = obj["location"][0]
+        # comp_longi = obj["location"][1]
 
-        user_lati = data_dict["location"][0]
-        user_longi = data_dict["location"][1]
+        # user_lati = data_dict["location"][0]
+        # user_longi = data_dict["location"][1]
 
-        pt_comp = geopy.Point(comp_lati, comp_longi)
-        pt_user = geopy.Point(user_lati, user_longi)
+        # pt_comp = geopy.Point(comp_lati, comp_longi)
+        # pt_user = geopy.Point(user_lati, user_longi)
 
-        distance = geopy.distance.distance(pt_comp, pt_user).km
-        distance = float(distance)
+        # distance = geopy.distance.distance(pt_comp, pt_user).km
+        # distance = float(distance)
 
-        if distance > 5:
-            return {"error": "user is not close"}, 406
-        else:
-            db.complaint.update(
-                {"_id": obj_id},
-                {"$addToSet": {"upvoters": session["user"]["_id"]}}
-            )
-            db.complaint.update(
-                {"_id": obj_id}, {"$inc": {"upvote_count": 1}}
-            )
-            return {"success": "upvote accepted"}, 202
+        # if distance > 5:
+        #     return {"error": "user is not close"}, 406
+        # else:
+        db.complaint.update(
+            {"_id": obj_id},
+            {"$addToSet": {"upvoters": session["user"]["_id"]}}
+        )
+        db.complaint.update(
+            {"_id": obj_id}, {"$inc": {"upvote_count": 1}}
+        )
+        return {"success": "upvote accepted"}, 202
 
 
 class ComplaintSingle(restful.Resource):
     def get(self, obj_id):
         obj_id = ObjectId(unicode(obj_id))
         obj = db.complaint.find_one({"_id": obj_id})
+
+        if not obj:
+            return abort(404)
+
         obj = serialize_complaint(obj)
         obj["user"] = db.users.find_one({"_id": obj["user"]})
         obj["user"] = serialize_user(obj["user"])
 
-        if not obj:
-            return abort(404)
+        for comment in obj["comments"]:
+            comment["author"] = db.users.find_one({
+                "_id": ObjectId(comment["author"])
+            })
+            comment["author"] = serialize_user(comment["author"])
+
         return obj
 
     # TODO: This must authenticate admin in a proper way!
@@ -493,6 +513,10 @@ class Comments(restful.Resource):
             try:
                 comment["date"] = str(comment["date"])
                 comment["_id"] = str(comment["_id"])
+                comment["author"] = db.users.find_one(
+                    {"_id": ObjectId(comment["author"])}
+                )
+                comment["author"] = serialize_user(comment["author"])
                 comments.append(comment)
             except:
                 pass
@@ -534,6 +558,7 @@ def byte_array_to_file(array, city, h):
 
 api.add_resource(Home, '/')
 api.add_resource(Login, '/login')
+api.add_resource(Logout, '/logout')
 api.add_resource(FacebookLogin, '/login/facebook')
 api.add_resource(Register, '/register')
 api.add_resource(Complaint, '/complaint')
