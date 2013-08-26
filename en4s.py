@@ -46,6 +46,29 @@ def authenticate(func):
     return wrapper
 
 
+def admin_authentication():
+    user_type = session.get("user")["user_type"]
+    if user_type == "admin":
+        return True
+    else:
+        return False
+    # return session["user"]["user_type"] is "admin"
+
+
+def admin_authenticate(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not getattr(func, 'authenticated', True):
+            return func(*args, **kwargs)
+
+        acct = admin_authentication()
+        if acct:
+            return func(*args, **kwargs)
+
+        restful.abort(401)
+    return wrapper
+
+
 class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
@@ -103,6 +126,7 @@ class FacebookLogin(restful.Resource):
                             "last_name": json_data["last_name"],
                             "name": json_data["name"],
                             "fbusername": json_data["username"],
+                            "user_type": "member",
                             "fb": 1
                         }
                     )
@@ -140,6 +164,7 @@ class Register(restful.Resource):
             "last_name": last_name,
             "name": name,
             "password": password,
+            "user_type": "member",
             "fb": 0
         }
 
@@ -158,16 +183,6 @@ class Register(restful.Resource):
                     return {'error': "can't register"}, 404
             else:
                 return {'error': "mail address is not valid"}, 404
-
-
-class Home(restful.Resource):
-    method_decorators = [authenticate]
-
-    def get(self):
-        if not session.get('logged_in'):
-            return {'error': 'authentication failed'}
-        else:
-            return {'success': 'auth ok'}
 
 
 class ComplaintRecent(restful.Resource):
@@ -377,21 +392,6 @@ class ComplaintUpvote(restful.Resource):
         if session["user"]["_id"] in upvoters:
             return {"error": "user already upvoted"}, 406
 
-        # comp_lati = obj["location"][0]
-        # comp_longi = obj["location"][1]
-
-        # user_lati = data_dict["location"][0]
-        # user_longi = data_dict["location"][1]
-
-        # pt_comp = geopy.Point(comp_lati, comp_longi)
-        # pt_user = geopy.Point(user_lati, user_longi)
-
-        # distance = geopy.distance.distance(pt_comp, pt_user).km
-        # distance = float(distance)
-
-        # if distance > 5:
-        #     return {"error": "user is not close"}, 406
-        # else:
         db.complaint.update(
             {"_id": obj_id},
             {"$addToSet": {"upvoters": session["user"]["_id"]}}
@@ -422,25 +422,27 @@ class ComplaintSingle(restful.Resource):
 
         return obj
 
-    # TODO: This must authenticate admin in a proper way!
-    def post(self, obj_id):
 
-        picpath = request.form["picpath"]
-        pw = request.form["pw"]
+class ComplaintDelete(restful.Resource):
+    method_decorators = [admin_authenticate]
+
+    def post(self):
+        data_dict = json.loads(request.data)
+        picpath = data_dict["picpath"]
+        complaint_id = data_dict["complaint_id"]
 
         picpath512 = picpath.replace(".jpg", ".512.jpg")
         path = "/srv/flask/en4s/uploads"
 
-        if pw == settings.ADMINPASS:
-            obj_id = ObjectId(unicode(obj_id))
-            db.complaint.remove({"_id": obj_id})
-            if picpath:
-                os.remove(path + picpath)
-                os.remove(path + picpath512)
+        obj_id = ObjectId(unicode(complaint_id))
+        db.complaint.remove({"_id": obj_id})
+        try:
+            os.remove(path + picpath)
+            os.remove(path + picpath512)
             # print db.complaint.find_one({"_id": obj_id})
             return {"success": "content deleted"}, 204
-        else:
-            return abort(404)
+        except:
+            return {"error": "something bad happened on delete"}, 404
 
 
 class CommentsNew(restful.Resource):
@@ -500,6 +502,22 @@ class CommentsVote(restful.Resource):
         return abort(404)
 
 
+class CommentsDelete(restful.Resource):
+    method_decorators = [admin_authenticate]
+
+    def post(self):
+        data_dict = json.loads(request.data)
+        obj_id = data_dict["complaint_id"]
+        comment_id = data_dict["comment_id"]
+
+        db.complaint.update(
+            {"_id": ObjectId(obj_id)},
+            {"$pull": {"comments": {"_id": ObjectId(comment_id)}}}
+        )
+
+        return 200
+
+
 class Comments(restful.Resource):
     def get(self, complaint_id):
         obj_id = ObjectId(unicode(complaint_id))
@@ -556,12 +574,12 @@ def byte_array_to_file(array, city, h):
     return new_url
 
 
-api.add_resource(Home, '/')
 api.add_resource(Login, '/login')
 api.add_resource(Logout, '/logout')
 api.add_resource(FacebookLogin, '/login/facebook')
 api.add_resource(Register, '/register')
 api.add_resource(Complaint, '/complaint')
+api.add_resource(ComplaintDelete, '/complaint/delete')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
 api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
 api.add_resource(ComplaintRecent, '/complaint/recent')
@@ -572,6 +590,7 @@ api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
 api.add_resource(Comments, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
 api.add_resource(CommentsVote, '/comments/vote/<string:complaint_id>')
+api.add_resource(CommentsDelete, '/comments/delete')
 
 
 if __name__ == '__main__':
