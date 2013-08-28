@@ -410,6 +410,30 @@ class ComplaintUpvote(restful.Resource):
         return {"success": "upvote accepted"}, 202
 
 
+class ComplaintDownvote(restful.Resource):
+    method_decorators = [authenticate]
+
+    def put(self, obj_id):
+        data_dict = json.loads(request.data)
+        obj_id = ObjectId(unicode(obj_id))
+        obj = db.complaint.find_one({"_id": obj_id})
+        if not obj:
+            return abort(404)
+
+        upvoters = obj["upvoters"]
+        if session["user"]["_id"] in upvoters:
+            return {"error": "user already voted"}, 406
+
+        db.complaint.update(
+            {"_id": obj_id},
+            {"$addToSet": {"upvoters": session["user"]["_id"]}}
+        )
+        db.complaint.update(
+            {"_id": obj_id}, {"$inc": {"downvote_count": 1}}
+        )
+        return {"success": "upvote accepted"}, 202
+
+
 class ComplaintSingle(restful.Resource):
     def get(self, obj_id):
         obj_id = ObjectId(unicode(obj_id))
@@ -590,6 +614,7 @@ api.add_resource(Complaint, '/complaint')
 api.add_resource(ComplaintDelete, '/complaint/delete')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
 api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
+api.add_resource(ComplaintDownvote, '/complaint/<string:obj_id>/downvote')
 api.add_resource(ComplaintRecent, '/complaint/recent')
 api.add_resource(ComplaintAll, '/complaint/all')
 api.add_resource(ComplaintTop, '/complaint/top')
