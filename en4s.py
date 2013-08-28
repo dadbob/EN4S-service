@@ -202,6 +202,8 @@ class ComplaintRecent(restful.Resource):
         items = items[:12]      # limit 10 item
 
         for item in items:
+            comments = item.pop("comments")
+            item["comments_count"] = len(comments)
             item = serialize_complaint(item)
             item["user"] = db.users.find_one({"_id": item["user"]})
             item["user"] = serialize_user(item["user"])
@@ -225,6 +227,8 @@ class ComplaintAll(restful.Resource):
             items = db.complaint.find().sort("date", pymongo.DESCENDING)
 
         for item in items:
+            comments = item.pop("comments")
+            item["comments_count"] = len(comments)
             item = serialize_complaint(item)
             item["user"] = db.users.find_one({"_id": item["user"]})
             item["user"] = serialize_user(item["user"])
@@ -251,6 +255,8 @@ class ComplaintTop(restful.Resource):
         items = items[:12]      # limit 10 item
 
         for item in items:
+            comments = item.pop("comments")
+            item["comments_count"] = len(comments)
             item = serialize_complaint(item)
             item["user"] = db.users.find_one({"_id": item["user"]})
             item["user"] = serialize_user(item["user"])
@@ -282,6 +288,8 @@ class ComplaintNear(restful.Resource):
         items = items[:12]      # limit 10 item
 
         for item in items:
+            comments = item.pop("comments")
+            item["comments_count"] = len(comments)
             item = serialize_complaint(item)
             item["user"] = db.users.find_one({"_id": item["user"]})
             item["user"] = serialize_user(item["user"])
