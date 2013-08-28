@@ -227,8 +227,8 @@ class ComplaintAll(restful.Resource):
             items = db.complaint.find().sort("date", pymongo.DESCENDING)
 
         for item in items:
-            comments = item.pop("comments")
-            item["comments_count"] = len(comments)
+            # comments = item.pop("comments")
+            # item["comments_count"] = len(comments)
             item = serialize_complaint(item)
             item["user"] = db.users.find_one({"_id": item["user"]})
             item["user"] = serialize_user(item["user"])
@@ -501,7 +501,15 @@ class CommentsNew(restful.Resource):
             {"_id": obj_id},
             {"$addToSet": {"comments": comment_data}}
         )
-        return {"success": "comment accepted"}, 202
+
+        comment_data["date"] = str(comment_data["date"])
+        comment_data["_id"] = str(comment_data["_id"])
+        comment_data["author"] = db.users.find_one(
+            {"_id": ObjectId(comment_data["author"])}
+        )
+        comment_data["author"] = serialize_user(comment_data["author"])
+
+        return comment_data, 201
 
 
 class CommentsVote(restful.Resource):
