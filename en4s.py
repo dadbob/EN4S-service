@@ -218,7 +218,7 @@ class ComplaintHot(restful.Resource):
             else:
                 item["score"] = item["upvote_count"]
 
-            item["score"] += 3 * len(item["comments"])
+            item["score"] += 2 * len(item["comments"])
 
             comments = item.pop("comments")
             item["comments_count"] = len(comments)
