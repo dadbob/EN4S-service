@@ -185,6 +185,54 @@ class Register(restful.Resource):
                 return {'error': "mail address is not valid"}, 404
 
 
+class ComplaintHot(restful.Resource):
+    def get(self):
+
+        current_time = datetime.now()
+
+        l = []
+        category = request.args.get('category', '')
+
+        if category is "":
+            category = "all"
+
+        if category is not 'all':
+            items = db.complaint.find({"category": category})
+            items = items.sort("date", pymongo.DESCENDING)
+        else:
+            items = db.complaint.find().sort("date", pymongo.DESCENDING)
+
+        items = items[:50]      # limit 50 before sorting with scores
+        for item in items:
+            complaint_time = item["date"]
+            delta = (current_time - complaint_time).days
+
+            if delta == 0:
+                item["score"] = 7 * item["upvote_count"]
+            elif delta == 1:
+                item["score"] = 5 * item["upvote_count"]
+            elif delta == 2:
+                item["score"] = 4 * item["upvote_count"]
+            elif delta == 3:
+                item["score"] = 2 * item["upvote_count"]
+            else:
+                item["score"] = item["upvote_count"]
+
+            item["score"] += 3 * len(item["comments"])
+
+            comments = item.pop("comments")
+            item["comments_count"] = len(comments)
+            item = serialize_complaint(item)
+            item["user"] = db.users.find_one({"_id": item["user"]})
+            item["user"] = serialize_user(item["user"])
+            l.append(item)
+
+        sorted_l = sorted(l, key=lambda x: x["score"], reverse=True)
+        sorted_l = sorted_l[:12]
+
+        return (sorted_l, 200, {"Cache-Control": "no-cache"})
+
+
 class ComplaintRecent(restful.Resource):
     def get(self):
         l = []
@@ -624,6 +672,7 @@ api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
 api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
 api.add_resource(ComplaintDownvote, '/complaint/<string:obj_id>/downvote')
 api.add_resource(ComplaintRecent, '/complaint/recent')
+api.add_resource(ComplaintHot, '/complaint/hot')
 api.add_resource(ComplaintAll, '/complaint/all')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
