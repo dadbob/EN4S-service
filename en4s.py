@@ -22,7 +22,7 @@ from PIL import Image
 
 # utils
 from serviceutils import serialize_user, serialize_complaint
-from serviceutils import check_mail, make_slug
+from serviceutils import check_mail, make_slug, get_city_and_address
 
 app = Flask(__name__)
 api = restful.Api(app)
@@ -369,8 +369,12 @@ class Complaint(restful.Resource):
         # userid = unicode(user["_id"])
         category = unicode(data_dict['category'])
         location = data_dict['location']
-        address = unicode(data_dict['address'])
-        city = unicode(data_dict['city'])
+
+        address_info = get_city_and_address(location)
+        city = address_info[0]
+        address = address_info[1]
+        # address = unicode(data_dict['address'])
+        # city = unicode(data_dict['city'])
         title = unicode(data_dict['title'])
         complaint_id = ObjectId()
         slug_city = make_slug(city)
@@ -421,6 +425,7 @@ class ComplaintPicture(restful.Resource):
         if not obj:
             return abort(404)
         city = unicode(obj["city"])
+        city = make_slug(city)
 
         arr = data_dict["pic"]  # base 64 encoded
         h = data_dict["hash"]  # hash of the pic
