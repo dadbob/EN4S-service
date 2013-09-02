@@ -118,10 +118,15 @@ class FacebookLogin(restful.Resource):
 
             if not user:
                 json_data = r.json()
+
+                if "email" in json_data:
+                    email = json_data["email"]
+                else:
+                    email = json_data["username"] + "@facebook.com"
                 try:
                     db.users.insert(
                         {
-                            "email": json_data["email"],
+                            "email": email,
                             "first_name": json_data["first_name"],
                             "last_name": json_data["last_name"],
                             "name": json_data["name"],
@@ -131,12 +136,13 @@ class FacebookLogin(restful.Resource):
                         }
                     )
 
-                    user = db.users.find_one({"email": json_data["email"]})
+                    user = db.users.find_one({"email": email})
                     session['user'] = user
                     session['logged_in'] = True
                     user["_id"] = unicode(user["_id"])
                     return user, 200
                 except:
+                    print "[debug] en4s.py line 145"
                     return {'error': 'cont login with facebook'}, 400
             else:
                 session['user'] = user
@@ -209,16 +215,22 @@ class ComplaintHot(restful.Resource):
 
             if delta == 0:
                 item["score"] = 7 * item["upvote_count"]
+                item["score"] += 2 * len(item["comments"])
             elif delta == 1:
                 item["score"] = 5 * item["upvote_count"]
+                item["score"] += len(item["comments"])
             elif delta == 2:
                 item["score"] = 4 * item["upvote_count"]
+                item["score"] += len(item["comments"])
             elif delta == 3:
                 item["score"] = 2 * item["upvote_count"]
+                item["score"] += len(item["comments"])
             else:
                 item["score"] = item["upvote_count"]
+                item["score"] += len(item["comments"])
 
-            item["score"] += 2 * len(item["comments"])
+            if int(item["downvote_count"]) >= int(item["upvote_count"]):
+                item["score"] = 0
 
             comments = item.pop("comments")
             item["comments_count"] = len(comments)
