@@ -69,6 +69,18 @@ def admin_authenticate(func):
     return wrapper
 
 
+class Hatirlat(restful.Resource):
+    def post(self):
+        data_dict = json.loads(request.data)
+        db.hatirlat.insert(
+            {
+                "email": data_dict["email"]
+            }
+        )
+
+        return "success", 200
+
+
 class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
@@ -709,7 +721,7 @@ def byte_array_to_file(array, city, h):
 
     return new_url
 
-
+api.add_resource(Hatirlat, '/hatirlat')
 api.add_resource(Login, '/login')
 api.add_resource(Logout, '/logout')
 api.add_resource(FacebookLogin, '/login/facebook')
