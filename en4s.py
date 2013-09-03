@@ -136,6 +136,11 @@ class FacebookLogin(restful.Resource):
                         }
                     )
 
+                    db.metadata.update(
+                        {"type": "statistics"},
+                        {"$inc": {"user_count": 1}}
+                    )
+
                     user = db.users.find_one({"email": email})
                     session['user'] = user
                     session['logged_in'] = True
@@ -184,6 +189,12 @@ class Register(restful.Resource):
                     session["user"] = user
                     session["logged_in"] = True
                     user = serialize_user(user)
+
+                    db.metadata.update(
+                        {"type": "statistics"},
+                        {"$inc": {"user_count": 1}}
+                    )
+
                     return user, 201
                 except:
                     return {'error': "can't register"}, 404
@@ -455,7 +466,6 @@ class ComplaintUpvote(restful.Resource):
     method_decorators = [authenticate]
 
     def put(self, obj_id):
-        data_dict = json.loads(request.data)
         obj_id = ObjectId(unicode(obj_id))
         obj = db.complaint.find_one({"_id": obj_id})
         if not obj:
@@ -472,6 +482,12 @@ class ComplaintUpvote(restful.Resource):
         db.complaint.update(
             {"_id": obj_id}, {"$inc": {"upvote_count": 1}}
         )
+
+        db.metadata.update(
+            {"type": "statistics"},
+            {"$inc": {"upvote_count": 1}}
+        )
+
         return {"success": "upvote accepted"}, 202
 
 
@@ -479,7 +495,6 @@ class ComplaintDownvote(restful.Resource):
     method_decorators = [authenticate]
 
     def put(self, obj_id):
-        data_dict = json.loads(request.data)
         obj_id = ObjectId(unicode(obj_id))
         obj = db.complaint.find_one({"_id": obj_id})
         if not obj:
@@ -532,6 +547,12 @@ class ComplaintDelete(restful.Resource):
         path = "/srv/flask/en4s/uploads"
 
         obj_id = ObjectId(unicode(complaint_id))
+
+        db.metadata.update(
+            {"type": "statistics"},
+            {"$inc": {"complaint_count": -1}}
+        )
+
         db.complaint.remove({"_id": obj_id})
         try:
             os.remove(path + picpath)
@@ -565,6 +586,11 @@ class CommentsNew(restful.Resource):
         db.complaint.update(
             {"_id": obj_id},
             {"$addToSet": {"comments": comment_data}}
+        )
+
+        db.metadata.update(
+            {"type": "statistics"},
+            {"$inc": {"comment_count": 1}}
         )
 
         comment_data["date"] = str(comment_data["date"])
@@ -618,6 +644,11 @@ class CommentsDelete(restful.Resource):
         db.complaint.update(
             {"_id": ObjectId(obj_id)},
             {"$pull": {"comments": {"_id": ObjectId(comment_id)}}}
+        )
+
+        db.metadata.update(
+            {"type": "statistics"},
+            {"$inc": {"comment_count": -1}}
         )
 
         return 200
