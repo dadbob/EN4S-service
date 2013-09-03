@@ -445,6 +445,12 @@ class Complaint(restful.Resource):
         print "[debug] before return new complaint"
         print "new complaint: "
         print new_complaint
+
+        db.metadata.update(
+            {"type": "statistics"},
+            {"$inc": {"complaint_count": 1}}
+        )
+
         return new_complaint, 201
 
 
@@ -741,7 +747,6 @@ api.add_resource(Comments, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
 api.add_resource(CommentsVote, '/comments/vote/<string:complaint_id>')
 api.add_resource(CommentsDelete, '/comments/delete')
-
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG
