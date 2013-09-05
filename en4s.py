@@ -162,6 +162,11 @@ class FacebookLogin(restful.Resource):
                     print "[debug] en4s.py line 145"
                     return {'error': 'cont login with facebook'}, 400
             else:
+                if user['fb'] == 0:
+                    user['fbusername'] = json_data["username"]
+                    user['fb'] = 1
+                    db.users.save(user)
+
                 session['user'] = user
                 session['logged_in'] = True
                 user["_id"] = unicode(user["_id"])
