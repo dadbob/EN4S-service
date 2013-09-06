@@ -582,6 +582,27 @@ class ComplaintSingle(restful.Resource):
         return obj
 
 
+class ComplaintSingleSlug(restful.Resource):
+    def get(self, city, slug):
+        path = "/" + city + "/" + slug
+        obj = db.complaint.find_one({"slug_url": path})
+
+        if not obj:
+            return abort(404)
+
+        obj = serialize_complaint(obj)
+        obj["user"] = db.users.find_one({"_id": obj["user"]})
+        obj["user"] = serialize_user(obj["user"])
+
+        for comment in obj["comments"]:
+            comment["author"] = db.users.find_one({
+                "_id": ObjectId(comment["author"])
+            })
+            comment["author"] = serialize_user(comment["author"])
+
+        return obj
+
+
 class ComplaintDelete(restful.Resource):
     method_decorators = [admin_authenticate]
 
@@ -764,6 +785,7 @@ api.add_resource(Register, '/register')
 api.add_resource(Complaint, '/complaint')
 api.add_resource(ComplaintDelete, '/complaint/delete')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
+api.add_resource(ComplaintSingleSlug, '/slug/<string:city>/<string:slug>')
 api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
 api.add_resource(ComplaintDownvote, '/complaint/<string:obj_id>/downvote')
 api.add_resource(ComplaintRecent, '/complaint/recent')
