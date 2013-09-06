@@ -1,10 +1,9 @@
 import os
 import json
 import base64
-import geopy
 import requests
 import bcrypt
-import geopy.distance
+
 from datetime import datetime
 from functools import wraps
 
@@ -23,6 +22,9 @@ from PIL import Image
 # utils
 from serviceutils import serialize_user, serialize_complaint
 from serviceutils import check_mail, make_slug, get_city_and_address
+
+# gravatar needings
+import hashlib, urllib
 
 app = Flask(__name__)
 api = restful.Api(app)
@@ -135,6 +137,11 @@ class FacebookLogin(restful.Resource):
                     email = json_data["email"]
                 else:
                     email = json_data["username"] + "@facebook.com"
+
+                avatar_url = "https://graph.facebook.com/"
+                avatar_url += json_data["username"]
+                avatar_url += "/picture?type=square&width=75&height=75"
+
                 try:
                     db.users.insert(
                         {
@@ -143,6 +150,7 @@ class FacebookLogin(restful.Resource):
                             "last_name": json_data["last_name"],
                             "name": json_data["name"],
                             "fbusername": json_data["username"],
+                            "avatar": avatar_url,
                             "user_type": "member",
                             "fb": 1
                         }
@@ -186,10 +194,18 @@ class Register(restful.Resource):
         password = unicode(data_dict['password'])
         password = bcrypt.hashpw(password, bcrypt.gensalt())
 
+        default = "http://enforceapp.com/static/img/enforce-avatar-small.png"
+        size = 75
+        gravatar_url = "http://www.gravatar.com/avatar/" +\
+                       hashlib.md5(email.lower()).hexdigest() + "?"
+
+        gravatar_url += urllib.urlencode({'d': default, 's': str(size)})
+
         user = {
             "email": email,
             "first_name": first_name,
             "last_name": last_name,
+            "avatar": gravatar_url,
             "name": name,
             "password": password,
             "user_type": "member",
@@ -241,20 +257,23 @@ class ComplaintHot(restful.Resource):
             complaint_time = item["date"]
             delta = (current_time - complaint_time).days
 
+            uc = item["upvote_count"]
+            dc = item["downvote_count"]
+
             if delta == 0:
-                item["score"] = 7 * item["upvote_count"]
+                item["score"] = 7 * (uc - dc)
                 item["score"] += 2 * len(item["comments"])
             elif delta == 1:
-                item["score"] = 5 * item["upvote_count"]
+                item["score"] = 5 * (uc - dc)
                 item["score"] += len(item["comments"])
             elif delta == 2:
-                item["score"] = 4 * item["upvote_count"]
+                item["score"] = 3 * (uc - dc)
                 item["score"] += len(item["comments"])
             elif delta == 3:
-                item["score"] = 2 * item["upvote_count"]
+                item["score"] = 2 * (uc - dc)
                 item["score"] += len(item["comments"])
             else:
-                item["score"] = item["upvote_count"]
+                item["score"] = (uc - dc)
                 item["score"] += len(item["comments"])
 
             if int(item["downvote_count"]) >= int(item["upvote_count"]):
@@ -421,11 +440,16 @@ class Complaint(restful.Resource):
         slug_title = make_slug(title)
         public_url = "/complaint/" + slug_city + "/" + slug_title + "/" + str(unicode(complaint_id))
 
+        number = db.metadata.find_one({"type": "statistics"})
+        number = int(number["complaint_count"])
+        number += 1
+        slug_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
         new_complaint = {
             "_id": complaint_id,
             "title": title,
             "user": ObjectId(user["_id"]),
             "pics": [],
+            "slug_url": slug_url,
             "public_url": public_url,
             "category": category,
             "comments": [],
@@ -701,7 +725,7 @@ class Comments(restful.Resource):
 
 
 def byte_array_to_file(array, city, h):
-    IMAGEFOLDER = "/srv/flask/en4s/uploads/pics/"
+    IMAGEFOLDER = "/srv/flask/en4s/pics/"
     URL = "/pics/"
 
     try:
