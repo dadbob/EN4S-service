@@ -235,6 +235,54 @@ class Register(restful.Resource):
                 return {'error': "mail address is not valid"}, 404
 
 
+class ProfileUpdate(restful.Resource):
+    def post(self):
+        data_dict = json.loads(request.data)
+        user = session.get("user")
+        if not user:
+            return abort(404)
+
+        update_type = data_dict["type"]
+        if update_type == "profile":
+            userid = user["_id"]
+            twitter = data_dict["twitter"]
+            website = data_dict["website"]
+
+            db.users.update(
+                {"_id": ObjectId(userid)},
+                {"$set": {"twitter": twitter, "website": website}}
+            )
+
+            user = db.users.find_one({"_id": ObjectId(userid)})
+            user.pop("password", None)
+            session['user'] = user
+            session['logged_in'] = True
+            user = serialize_user(user)
+            return user, 200
+        elif update_type == "password":
+            userid = user["_id"]
+            user = db.users.find_one({"email": unicode(user['email'])})
+
+            if not user:
+                return {'error': 'user not found'}, 404
+
+            current_pwd = data_dict["current_pwd"]
+            new_pwd = data_dict["new_pwd"]
+
+            pwd_hash = user["password"]
+            if bcrypt.hashpw(current_pwd, pwd_hash) != pwd_hash:
+                return {'error': 'password is invalid'}, 404
+            else:
+                new_pwd_hash = bcrypt.hashpw(new_pwd, bcrypt.gensalt())
+                db.users.update(
+                    {"_id": ObjectId(userid)},
+                    {"$set": {"password": new_pwd_hash}}
+                )
+                return 200
+
+        return 402
+
+
 class ComplaintHot(restful.Resource):
     def get(self):
 
@@ -780,6 +828,7 @@ def byte_array_to_file(array, city, h):
 api.add_resource(Hatirlat, '/hatirlat')
 api.add_resource(Login, '/login')
 api.add_resource(Logout, '/logout')
+api.add_resource(ProfileUpdate, '/profileupdate')
 api.add_resource(FacebookLogin, '/login/facebook')
 api.add_resource(Register, '/register')
 api.add_resource(Complaint, '/complaint')
