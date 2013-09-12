@@ -24,7 +24,8 @@ from serviceutils import serialize_user, serialize_complaint
 from serviceutils import check_mail, make_slug, get_city_and_address
 
 # gravatar needings
-import hashlib, urllib
+import hashlib
+import urllib
 
 app = Flask(__name__)
 api = restful.Api(app)
@@ -340,6 +341,33 @@ class ComplaintHot(restful.Resource):
         return (sorted_l, 200, {"Cache-Control": "no-cache"})
 
 
+class City(restful.Resource):
+    def get(self, city):
+        l = []
+        category = request.args.get('category', '')
+
+        if category is "":
+            category = "all"
+
+        if category is not 'all':
+            items = db.complaint.find({"category": category, "city": city})
+            items = items.sort("date", pymongo.DESCENDING)
+        else:
+            items = db.complaint.find(
+                {"city": city}
+            ).sort("date", pymongo.DESCENDING)
+
+        for item in items:
+            comments = item.pop("comments")
+            item["comments_count"] = len(comments)
+            item = serialize_complaint(item)
+            item["user"] = db.users.find_one({"_id": item["user"]})
+            item["user"] = serialize_user(item["user"])
+            l.append(item)
+
+        return (l, 200, {"Cache-Control": "no-cache"})
+
+
 class ComplaintRecent(restful.Resource):
     def get(self):
         l = []
@@ -497,6 +525,7 @@ class Complaint(restful.Resource):
             "title": title,
             "user": ObjectId(user["_id"]),
             "pics": [],
+            "slug_city": slug_city,
             "slug_url": slug_url,
             "public_url": public_url,
             "category": category,
@@ -843,6 +872,7 @@ api.add_resource(ComplaintAll, '/complaint/all')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
+api.add_resource(City, '/<string:city>')
 api.add_resource(Comments, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
 api.add_resource(CommentsVote, '/comments/vote/<string:complaint_id>')
