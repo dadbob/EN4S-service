@@ -36,6 +36,12 @@ def serialize_user(item):
     if obj:
         obj.pop("password", None)
         obj["_id"] = unicode(obj["_id"])
+        serialized_complaints = []
+        complaints = obj["complaints"]
+        for c in complaints:
+            serialized_complaints.append(unicode(c))
+        obj["complaints"] = serialized_complaints
+
     return obj
 
 

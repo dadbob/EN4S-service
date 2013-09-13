@@ -367,9 +367,9 @@ class City(restful.Resource):
         for item in items:
             comments = item.pop("comments")
             item["comments_count"] = len(comments)
+            item.pop("user")
+            item.pop("upvoters")
             item = serialize_complaint(item)
-            item["user"] = db.users.find_one({"_id": item["user"]})
-            item["user"] = serialize_user(item["user"])
             l.append(item)
 
         return (l, 200, {"Cache-Control": "no-cache"})
