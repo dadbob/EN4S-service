@@ -151,6 +151,7 @@ class FacebookLogin(restful.Resource):
                             "first_name": json_data["first_name"],
                             "last_name": json_data["last_name"],
                             "name": json_data["name"],
+                            "complaints": [],
                             "fbusername": json_data["username"],
                             "avatar": avatar_url,
                             "user_type": "member",
@@ -209,6 +210,7 @@ class Register(restful.Resource):
             "last_name": last_name,
             "avatar": gravatar_url,
             "name": name,
+            "complaints": [],
             "password": password,
             "user_type": "member",
             "fb": 0
