@@ -566,6 +566,11 @@ class Complaint(restful.Resource):
             {"$inc": {"complaint_count": 1}}
         )
 
+        db.users.update(
+            {"_id": ObjectId(user["_id"])},
+            {"$addToSet": {"complaints": ObjectId(complaint_id)}}
+        )
+
         return new_complaint, 201
 
 
@@ -701,10 +706,16 @@ class ComplaintDelete(restful.Resource):
         path = "/srv/flask/en4s/uploads"
 
         obj_id = ObjectId(unicode(complaint_id))
+        obj = db.complaint.find_one({"_id": obj_id})
 
         db.metadata.update(
             {"type": "statistics"},
             {"$inc": {"complaint_count": -1}}
+        )
+
+        db.users.update(
+            {"_id": obj["user"]},
+            {"$pull": {"complaints": obj["_id"]}}
         )
 
         db.complaint.remove({"_id": obj_id})
