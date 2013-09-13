@@ -78,3 +78,25 @@ def get_city_and_address(location):
         return (city, address)
     else:
         return None
+
+
+def get_location_from_city(city):
+    """
+
+    Arguments:
+    - `city`:
+    """
+    URL_BASE = "http://maps.googleapis.com/maps/api"
+    URL_PATH = URL_BASE + "/geocode/json?address=%s+%s&sensor=false" \
+        % (city, "turkey")
+
+    r = requests.get(URL_PATH)
+    if r.status_code == 200:
+        result = r.json()
+        lati = result["results"][0]["geometry"]["location"]["lat"]
+        longi = result["results"][0]["geometry"]["location"]["lng"]
+
+        location = [lati, longi]
+        return location
+    else:
+        return None

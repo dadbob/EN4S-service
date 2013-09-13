@@ -21,7 +21,8 @@ from PIL import Image
 
 # utils
 from serviceutils import serialize_user, serialize_complaint
-from serviceutils import check_mail, make_slug, get_city_and_address
+from serviceutils import check_mail, make_slug
+from serviceutils import get_location_from_city, get_city_and_address
 
 # gravatar needings
 import hashlib
@@ -341,6 +342,12 @@ class ComplaintHot(restful.Resource):
         return (sorted_l, 200, {"Cache-Control": "no-cache"})
 
 
+class CityMeta(restful.Resource):
+    def get(self, city):
+        location = get_location_from_city(city)
+        return (location, 200, {"Cache-Control": "no-cache"})
+
+
 class City(restful.Resource):
     def get(self, city):
         l = []
@@ -350,11 +357,11 @@ class City(restful.Resource):
             category = "all"
 
         if category is not 'all':
-            items = db.complaint.find({"category": category, "city": city})
+            items = db.complaint.find({"category": category, "slug_city": city})
             items = items.sort("date", pymongo.DESCENDING)
         else:
             items = db.complaint.find(
-                {"city": city}
+                {"slug_city": city}
             ).sort("date", pymongo.DESCENDING)
 
         for item in items:
@@ -873,6 +880,7 @@ api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
 api.add_resource(City, '/<string:city>')
+api.add_resource(CityMeta, '/<string:city>/citymeta')
 api.add_resource(Comments, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
 api.add_resource(CommentsVote, '/comments/vote/<string:complaint_id>')
