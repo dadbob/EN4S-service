@@ -21,6 +21,13 @@ def serialize_complaint(item):
 
         obj["upvoters"] = serialized_upvoters
 
+    if "downvoters" in obj:
+        serialized_downvoters = []
+        for downvoter in obj["downvoters"]:
+            serialized_downvoters.append(unicode(downvoter))
+
+        obj["downvoters"] = serialized_downvoters
+
     if "comments" in obj:
         for comment in obj["comments"]:
             comment["_id"] = unicode(comment["_id"])
@@ -36,11 +43,27 @@ def serialize_user(item):
     if obj:
         obj.pop("password", None)
         obj["_id"] = unicode(obj["_id"])
-        serialized_complaints = []
-        complaints = obj["complaints"]
-        for c in complaints:
-            serialized_complaints.append(unicode(c))
-        obj["complaints"] = serialized_complaints
+
+        if "complaints" in obj:
+            serialized_complaints = []
+            complaints = obj["complaints"]
+            for c in complaints:
+                serialized_complaints.append(unicode(c))
+            obj["complaints"] = serialized_complaints
+
+        if "upvotes" in obj:
+            serialized_upvotes = []
+            upvotes = obj["upvotes"]
+            for u in upvotes:
+                serialized_upvotes.append(unicode(u))
+            obj["upvotes"] = serialized_upvotes
+
+        if "downvotes" in obj:
+            serialized_downvotes = []
+            downvotes = obj["downvotes"]
+            for d in downvotes:
+                serialized_downvotes.append(unicode(d))
+            obj["downvotes"] = serialized_downvotes
 
     return obj
 

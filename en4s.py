@@ -100,7 +100,12 @@ class Login(restful.Resource):
         if bcrypt.hashpw(pwd, pwd_hash) != pwd_hash:
             return {'error': 'password is invalid'}, 404
         else:
-            user.pop("password", None)
+            pop_arr = ["password", "complaints",
+                       "upvotes", "downvotes"]
+            for item in pop_arr:
+                if item in user:
+                    user.pop(item, None)
+
             session['user'] = user
             session['logged_in'] = True
             user = serialize_user(user)
@@ -113,8 +118,6 @@ class Logout(restful.Resource):
         session['user'] = None
         session['logged_in'] = False
         return {"success": "successfuly logged out"}, 200
-
-            # return {"error": "something bad happened"}, 404
 
 
 class FacebookLogin(restful.Resource):
@@ -152,6 +155,8 @@ class FacebookLogin(restful.Resource):
                             "last_name": json_data["last_name"],
                             "name": json_data["name"],
                             "complaints": [],
+                            "upvotes": [],
+                            "downvotes": [],
                             "fbusername": json_data["username"],
                             "avatar": avatar_url,
                             "user_type": "member",
@@ -165,9 +170,16 @@ class FacebookLogin(restful.Resource):
                     )
 
                     user = db.users.find_one({"email": email})
+
+                    pop_arr = ["password", "complaints",
+                               "upvotes", "downvotes"]
+                    for item in pop_arr:
+                        if item in user:
+                            user.pop(item, None)
+
                     session['user'] = user
                     session['logged_in'] = True
-                    user["_id"] = unicode(user["_id"])
+                    user = serialize_user(user)
                     return user, 200
                 except:
                     print "[debug] en4s.py line 145"
@@ -178,9 +190,14 @@ class FacebookLogin(restful.Resource):
                     user['fb'] = 1
                     db.users.save(user)
 
+                pop_arr = ["password", "complaints", "upvotes", "downvotes"]
+                for item in pop_arr:
+                    if item in user:
+                        user.pop(item, None)
+
                 session['user'] = user
                 session['logged_in'] = True
-                user["_id"] = unicode(user["_id"])
+                user = serialize_user(user)
                 return user, 200
 
 
@@ -211,6 +228,8 @@ class Register(restful.Resource):
             "avatar": gravatar_url,
             "name": name,
             "complaints": [],
+            "upvotes": [],
+            "downvotes": [],
             "password": password,
             "user_type": "member",
             "fb": 0
@@ -220,21 +239,24 @@ class Register(restful.Resource):
             return {'error': 'email or password not given'}, 404
         else:
             if check_mail(email):
-                try:
-                    db.users.insert(user)
-                    user.pop("password", None)
-                    session["user"] = user
-                    session["logged_in"] = True
-                    user = serialize_user(user)
 
-                    db.metadata.update(
-                        {"type": "statistics"},
-                        {"$inc": {"user_count": 1}}
-                    )
+                db.users.insert(user)
 
-                    return user, 201
-                except:
-                    return {'error': "can't register"}, 404
+                pop_arr = ["password", "complaints", "upvotes", "downvotes"]
+                for item in pop_arr:
+                    if item in user:
+                        user.pop(item, None)
+
+                session["user"] = user
+                session["logged_in"] = True
+                user = serialize_user(user)
+
+                db.metadata.update(
+                    {"type": "statistics"},
+                    {"$inc": {"user_count": 1}}
+                )
+
+                return user, 201
             else:
                 return {'error': "mail address is not valid"}, 404
 
@@ -540,6 +562,7 @@ class Complaint(restful.Resource):
             "category": category,
             "comments": [],
             "upvoters": [user["_id"]],
+            "downvoters": [],
             "upvote_count": 1,
             "downvote_count": 0,
             "location": location,
@@ -551,13 +574,8 @@ class Complaint(restful.Resource):
         user = session.get("user")
 
         db.complaint.insert(new_complaint)
-        new_complaint["_id"] = unicode(complaint_id)
-        new_complaint["user"] = user
-        new_complaint["user"]["_id"] = unicode(user["_id"])
-        new_complaint["_id"] = unicode(new_complaint["_id"])
-        new_complaint["date"] = unicode(new_complaint["date"])
-        new_complaint["upvoters"][0] = unicode(new_complaint["upvoters"][0])
-        print "[debug] before return new complaint"
+        new_complaint = serialize_complaint(new_complaint)
+        new_complaint["user"] = serialize_user(user)
         print "new complaint: "
         print new_complaint
 
@@ -610,20 +628,20 @@ class ComplaintUpvote(restful.Resource):
             return abort(404)
 
         upvoters = obj["upvoters"]
+        downvoters = obj["downvoters"]
+
         if session["user"]["_id"] in upvoters:
             return {"error": "user already upvoted"}, 406
+        elif session["user"]["_id"] in downvoters:
+            return {"error": "user already voted"}, 406
 
         db.complaint.update(
             {"_id": obj_id},
             {"$addToSet": {"upvoters": session["user"]["_id"]}}
         )
+
         db.complaint.update(
             {"_id": obj_id}, {"$inc": {"upvote_count": 1}}
-        )
-
-        db.metadata.update(
-            {"type": "statistics"},
-            {"$inc": {"upvote_count": 1}}
         )
 
         return {"success": "upvote accepted"}, 202
@@ -639,17 +657,22 @@ class ComplaintDownvote(restful.Resource):
             return abort(404)
 
         upvoters = obj["upvoters"]
+        downvoters = obj["downvoters"]
+
         if session["user"]["_id"] in upvoters:
+            return {"error": "user already voted"}, 406
+        elif session["user"]["_id"] in downvoters:
             return {"error": "user already voted"}, 406
 
         db.complaint.update(
             {"_id": obj_id},
-            {"$addToSet": {"upvoters": session["user"]["_id"]}}
+            {"$addToSet": {"downvoters": session["user"]["_id"]}}
         )
+
         db.complaint.update(
             {"_id": obj_id}, {"$inc": {"downvote_count": 1}}
         )
-        return {"success": "upvote accepted"}, 202
+        return {"success": "downvote accepted"}, 202
 
 
 class ComplaintSingle(restful.Resource):
