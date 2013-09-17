@@ -574,8 +574,11 @@ class Complaint(restful.Resource):
         user = session.get("user")
 
         db.complaint.insert(new_complaint)
+
         new_complaint = serialize_complaint(new_complaint)
         new_complaint["user"] = serialize_user(user)
+        new_complaint["comments_count"] = 0
+
         print "new complaint: "
         print new_complaint
 
@@ -586,7 +589,12 @@ class Complaint(restful.Resource):
 
         db.users.update(
             {"_id": ObjectId(user["_id"])},
-            {"$addToSet": {"complaints": ObjectId(complaint_id)}}
+            {
+                "$addToSet": {
+                    "complaints": ObjectId(complaint_id),
+                    "upvotes": ObjectId(complaint_id)
+                }
+            }
         )
 
         return new_complaint, 201
@@ -764,7 +772,14 @@ class ComplaintDelete(restful.Resource):
 
         db.users.update(
             {"upvotes": obj["_id"]},
-            {"$pull": {"upvotes": obj["_id"]}}
+            {"$pull": {"upvotes": obj["_id"]}},
+            multi=True
+        )
+
+        db.users.update(
+            {"downvotes": obj["_id"]},
+            {"$pull": {"downvotes": obj["_id"]}},
+            multi=True
         )
 
         db.complaint.remove({"_id": obj_id})
