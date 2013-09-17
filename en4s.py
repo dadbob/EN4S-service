@@ -630,18 +630,28 @@ class ComplaintUpvote(restful.Resource):
         upvoters = obj["upvoters"]
         downvoters = obj["downvoters"]
 
-        if session["user"]["_id"] in upvoters:
+        user = session["user"]
+        if not user:
+            return abort(404)
+        user_id = ObjectId(user["_id"])
+
+        if user_id in upvoters:
             return {"error": "user already upvoted"}, 406
-        elif session["user"]["_id"] in downvoters:
+        elif user_id in downvoters:
             return {"error": "user already voted"}, 406
 
         db.complaint.update(
             {"_id": obj_id},
-            {"$addToSet": {"upvoters": session["user"]["_id"]}}
+            {"$addToSet": {"upvoters": user_id}}
         )
 
         db.complaint.update(
             {"_id": obj_id}, {"$inc": {"upvote_count": 1}}
+        )
+
+        db.users.update(
+            {"_id": user_id},
+            {"$addToSet": {"upvotes": obj_id}}
         )
 
         return {"success": "upvote accepted"}, 202
@@ -659,19 +669,30 @@ class ComplaintDownvote(restful.Resource):
         upvoters = obj["upvoters"]
         downvoters = obj["downvoters"]
 
-        if session["user"]["_id"] in upvoters:
+        user = session["user"]
+        if not user:
+            return abort(404)
+        user_id = ObjectId(user["_id"])
+
+        if user_id in upvoters:
             return {"error": "user already voted"}, 406
-        elif session["user"]["_id"] in downvoters:
+        elif user_id in downvoters:
             return {"error": "user already voted"}, 406
 
         db.complaint.update(
             {"_id": obj_id},
-            {"$addToSet": {"downvoters": session["user"]["_id"]}}
+            {"$addToSet": {"downvoters": user_id}}
         )
 
         db.complaint.update(
             {"_id": obj_id}, {"$inc": {"downvote_count": 1}}
         )
+
+        db.users.update(
+            {"_id": user_id},
+            {"$addToSet": {"downvotes": obj_id}}
+        )
+
         return {"success": "downvote accepted"}, 202
 
 
