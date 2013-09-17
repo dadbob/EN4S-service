@@ -762,6 +762,11 @@ class ComplaintDelete(restful.Resource):
             {"$pull": {"complaints": obj["_id"]}}
         )
 
+        db.users.update(
+            {"upvotes": obj["_id"]},
+            {"$pull": {"upvotes": obj["_id"]}}
+        )
+
         db.complaint.remove({"_id": obj_id})
         try:
             os.remove(path + picpath)
