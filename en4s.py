@@ -381,7 +381,10 @@ class City(restful.Resource):
             category = "all"
 
         if category is not 'all':
-            items = db.complaint.find({"category": category, "slug_city": city})
+            items = db.complaint.find(
+                {"category": category, "slug_city": city}
+            )
+
             items = items.sort("date", pymongo.DESCENDING)
         else:
             items = db.complaint.find(
@@ -545,7 +548,6 @@ class Complaint(restful.Resource):
         complaint_id = ObjectId()
         slug_city = make_slug(city)
         slug_title = make_slug(title)
-        public_url = "/complaint/" + slug_city + "/" + slug_title + "/" + str(unicode(complaint_id))
 
         number = db.metadata.find_one({"type": "statistics"})
         number = int(number["complaint_count"])
@@ -558,7 +560,6 @@ class Complaint(restful.Resource):
             "pics": [],
             "slug_city": slug_city,
             "slug_url": slug_url,
-            "public_url": public_url,
             "category": category,
             "comments": [],
             "upvoters": [user["_id"]],
