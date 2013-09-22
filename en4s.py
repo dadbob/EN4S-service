@@ -920,8 +920,23 @@ class Comments(restful.Resource):
 
 class User(restful.Resource):
     def get(self, userslug):
-        db.users.find_one({"user_slug": userslug})
-        return 200
+        user = db.users.find_one({"user_slug": userslug})
+        cmps = []
+        for complaint in user["complaints"]:
+            temp_cmp = db.complaint.find_one(complaint)
+            temp_cmp = serialize_complaint(temp_cmp)
+            cmps.append(temp_cmp)
+        user["complaints"] = cmps
+
+        upvts = []
+        for upvote in user["upvotes"]:
+            temp_upvote = db.complaint.find_one(upvote)
+            temp_upvote = serialize_complaint(temp_upvote)
+            upvts.append(temp_upvote)
+        user["upvotes"] = upvts
+
+        user = serialize_user(user)
+        return user, 200
 
 
 def byte_array_to_file(array, city, h):
