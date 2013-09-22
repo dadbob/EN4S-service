@@ -921,21 +921,25 @@ class Comments(restful.Resource):
 class User(restful.Resource):
     def get(self, userslug):
         user = db.users.find_one({"user_slug": userslug})
+        user = serialize_user(user)
         cmps = []
         for complaint in user["complaints"]:
-            temp_cmp = db.complaint.find_one(complaint)
+            temp_cmp = db.complaint.find_one({"_id": ObjectId(complaint)})
+            comments = temp_cmp.pop("comments")
+            temp_cmp["comments_count"] = len(comments)
             temp_cmp = serialize_complaint(temp_cmp)
             cmps.append(temp_cmp)
         user["complaints"] = cmps
 
         upvts = []
         for upvote in user["upvotes"]:
-            temp_upvote = db.complaint.find_one(upvote)
+            temp_upvote = db.complaint.find_one({"_id": ObjectId(upvote)})
+            comments = temp_upvote.pop("comments")
+            temp_cmp["comments_count"] = len(comments)
             temp_upvote = serialize_complaint(temp_upvote)
             upvts.append(temp_upvote)
         user["upvotes"] = upvts
 
-        user = serialize_user(user)
         return user, 200
 
 
