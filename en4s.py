@@ -31,7 +31,6 @@ import urllib
 app = Flask(__name__)
 api = restful.Api(app)
 
-
 def basic_authentication():
     return session.get('logged_in')
 
@@ -147,6 +146,11 @@ class FacebookLogin(restful.Resource):
                 avatar_url += json_data["username"]
                 avatar_url += "/picture?type=square&width=75&height=75"
 
+                meta = db.metadata.find_one()
+                user_count = int(meta["user_count"])
+                user_count = str(user_count + 1)
+                user_slug = make_slug(json_data["name"]) + "-" + user_count
+
                 try:
                     db.users.insert(
                         {
@@ -160,6 +164,7 @@ class FacebookLogin(restful.Resource):
                             "fbusername": json_data["username"],
                             "avatar": avatar_url,
                             "user_type": "member",
+                            "user_slug": user_slug,
                             "fb": 1
                         }
                     )
@@ -221,6 +226,11 @@ class Register(restful.Resource):
 
         gravatar_url += urllib.urlencode({'d': default, 's': str(size)})
 
+        meta = db.metadata.find_one()
+        user_count = int(meta["user_count"])
+        user_count = str(user_count + 1)
+        user_slug = make_slug(name) + "-" + user_count
+
         user = {
             "email": email,
             "first_name": first_name,
@@ -232,6 +242,7 @@ class Register(restful.Resource):
             "downvotes": [],
             "password": password,
             "user_type": "member",
+            "user_slug": user_slug,
             "fb": 0
         }
 
@@ -907,6 +918,12 @@ class Comments(restful.Resource):
         return comments, 200
 
 
+class User(restful.Resource):
+    def get(self, userslug):
+        db.users.find_one({"user_slug": userslug})
+        return 200
+
+
 def byte_array_to_file(array, city, h):
     IMAGEFOLDER = "/srv/flask/en4s/pics/"
     URL = "/pics/"
@@ -958,6 +975,7 @@ api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
 api.add_resource(City, '/<string:city>')
+api.add_resource(User, '/user/<string:userslug>')
 api.add_resource(CityMeta, '/<string:city>/citymeta')
 api.add_resource(Comments, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
