@@ -357,9 +357,14 @@ class ComplaintHot(restful.Resource):
             elif delta == 3:
                 item["score"] = 2 * (uc - dc)
                 item["score"] += len(item["comments"])
-            else:
+            elif delta > 15 and delta < 30:
                 item["score"] = (uc - dc)
-                item["score"] += len(item["comments"])
+            elif delta > 30 and delta < 60:
+                item["score"] = 0.8 * (uc - dc)
+            elif delta > 60 and delta < 120:
+                item["score"] = 0.5 * (uc - dc)
+            else:
+                item["score"] = 0.3 * (uc - dc)
 
             if int(item["downvote_count"]) >= int(item["upvote_count"]):
                 item["score"] = 0
@@ -925,6 +930,7 @@ class User(restful.Resource):
         cmps = []
         for complaint in user["complaints"]:
             temp_cmp = db.complaint.find_one({"_id": ObjectId(complaint)})
+            temp_cmp.pop("user")
             comments = temp_cmp.pop("comments")
             temp_cmp["comments_count"] = len(comments)
             temp_cmp = serialize_complaint(temp_cmp)
@@ -934,8 +940,9 @@ class User(restful.Resource):
         upvts = []
         for upvote in user["upvotes"]:
             temp_upvote = db.complaint.find_one({"_id": ObjectId(upvote)})
+            temp_upvote.pop("user")
             comments = temp_upvote.pop("comments")
-            temp_cmp["comments_count"] = len(comments)
+            temp_upvote["comments_count"] = len(comments)
             temp_upvote = serialize_complaint(temp_upvote)
             upvts.append(temp_upvote)
         user["upvotes"] = upvts
