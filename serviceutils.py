@@ -13,7 +13,6 @@ def serialize_complaint(item):
 
     obj["_id"] = unicode(obj["_id"])
     obj["date"] = unicode(obj["date"].strftime("%Y-%m-%d %H:%M:%S.%f"))
-    obj["user"] = unicode(obj["user"])
 
     if "upvoters" in obj:
         serialized_upvoters = []

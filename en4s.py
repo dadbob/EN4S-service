@@ -31,6 +31,7 @@ import urllib
 app = Flask(__name__)
 api = restful.Api(app)
 
+
 def basic_authentication():
     return session.get('logged_in')
 
@@ -137,13 +138,18 @@ class FacebookLogin(restful.Resource):
             if not user:
                 json_data = r.json()
 
+                if "username" in json_data:
+                    username = json_data["username"]
+                else:
+                    username = json_data["id"]
+
                 if "email" in json_data:
                     email = json_data["email"]
                 else:
-                    email = json_data["username"] + "@facebook.com"
+                    email = username + "@facebook.com"
 
                 avatar_url = "https://graph.facebook.com/"
-                avatar_url += json_data["username"]
+                avatar_url += username
                 avatar_url += "/picture?type=square&width=75&height=75"
 
                 meta = db.metadata.find_one()
@@ -161,7 +167,7 @@ class FacebookLogin(restful.Resource):
                             "complaints": [],
                             "upvotes": [],
                             "downvotes": [],
-                            "fbusername": json_data["username"],
+                            "fbusername": username,
                             "avatar": avatar_url,
                             "user_type": "member",
                             "user_slug": user_slug,
@@ -191,7 +197,12 @@ class FacebookLogin(restful.Resource):
                     return {'error': 'cont login with facebook'}, 400
             else:
                 if user['fb'] == 0:
-                    user['fbusername'] = json_data["username"]
+                    if "username" in json_data:
+                        username = json_data["username"]
+                    else:
+                        username = json_data["id"]
+
+                    user['fbusername'] = username
                     user['fb'] = 1
                     db.users.save(user)
 
@@ -569,6 +580,7 @@ class Complaint(restful.Resource):
         number = int(number["complaint_count"])
         number += 1
         slug_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
+        public_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
         new_complaint = {
             "_id": complaint_id,
             "title": title,
@@ -576,6 +588,7 @@ class Complaint(restful.Resource):
             "pics": [],
             "slug_city": slug_city,
             "slug_url": slug_url,
+            "public_url": public_url,
             "category": category,
             "comments": [],
             "upvoters": [user["_id"]],
@@ -923,9 +936,23 @@ class Comments(restful.Resource):
         return comments, 200
 
 
+class UserAll(restful.Resource):
+    def get(self):
+        users = db.users.find()
+        serialized_users = []
+        for user in users:
+            temp_user = serialize_user(user)
+            serialized_users.append(temp_user)
+
+        return serialized_users, 200
+
+
 class User(restful.Resource):
     def get(self, userslug):
         user = db.users.find_one({"user_slug": userslug})
+        if not user:
+            return abort(404)
+
         user = serialize_user(user)
         cmps = []
         for complaint in user["complaints"]:
@@ -1002,6 +1029,7 @@ api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(ComplaintPicture, '/upload/<string:obj_id>')
 api.add_resource(City, '/<string:city>')
 api.add_resource(User, '/user/<string:userslug>')
+api.add_resource(UserAll, '/user/all')
 api.add_resource(CityMeta, '/<string:city>/citymeta')
 api.add_resource(Comments, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
