@@ -574,8 +574,8 @@ class Complaint(restful.Resource):
         slug_city = make_slug(city)
         slug_title = make_slug(title)
 
-        # pic_arr = data_dict["pic"]
-        # filename = byte_array_to_file(pic_arr, city, slug_title)
+        pic_arr = data_dict["pic"]
+        filename = byte_array_to_file(pic_arr, city, slug_title)
 
         number = db.metadata.find_one({"type": "statistics"})
         number = int(number["complaint_count"])
@@ -586,7 +586,7 @@ class Complaint(restful.Resource):
             "_id": ObjectId(),
             "title": title,
             "user": ObjectId(user["_id"]),
-            "pics": [],
+            "pics": [filename],
             "slug_city": slug_city,
             "slug_url": slug_url,
             "public_url": public_url,
@@ -625,32 +625,6 @@ class Complaint(restful.Resource):
         )
 
         return new_complaint, 201
-
-
-class ComplaintPicture(restful.Resource):
-    # todo base64 olarak degil
-    # file objesi olarak almak daha verimli olacak.
-    method_decorators = [authenticate]
-
-    def post(self, obj_id):
-        data_dict = json.loads(request.data)
-        obj_id = ObjectId(unicode(obj_id))
-        obj = db.complaint.find_one({"_id": obj_id})
-        if not obj:
-            return abort(404)
-        city = unicode(obj["city"])
-        city = make_slug(city)
-
-        arr = data_dict["pic"]  # base 64 encoded
-        h = data_dict["hash"]  # hash of the pic
-
-        filename = byte_array_to_file(arr, city, h)
-
-        db.complaint.update(
-            {"_id": obj_id}, {"$addToSet": {"pics": filename}}
-        )
-
-        return {'path': str(filename)}, 201
 
 
 class ComplaintUpvote(restful.Resource):
