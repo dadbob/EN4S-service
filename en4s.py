@@ -565,19 +565,17 @@ class Complaint(restful.Resource):
         user = session["user"]
         data_dict = json.loads(request.data.decode("utf-8"))
 
-        # userid = unicode(user["_id"])
-        category = unicode(data_dict['category'])
         location = data_dict['location']
-
         address_info = get_city_and_address(location)
         city = address_info[0]
         address = address_info[1]
-        # address = unicode(data_dict['address'])
-        # city = unicode(data_dict['city'])
+
         title = unicode(data_dict['title'])
-        complaint_id = ObjectId()
         slug_city = make_slug(city)
         slug_title = make_slug(title)
+
+        # pic_arr = data_dict["pic"]
+        # filename = byte_array_to_file(pic_arr, city, slug_title)
 
         number = db.metadata.find_one({"type": "statistics"})
         number = int(number["complaint_count"])
@@ -585,14 +583,14 @@ class Complaint(restful.Resource):
         slug_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
         public_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
         new_complaint = {
-            "_id": complaint_id,
+            "_id": ObjectId(),
             "title": title,
             "user": ObjectId(user["_id"]),
             "pics": [],
             "slug_city": slug_city,
             "slug_url": slug_url,
             "public_url": public_url,
-            "category": category,
+            "category": data_dict['category'],
             "comments": [],
             "upvoters": [user["_id"]],
             "downvoters": [],
@@ -605,15 +603,11 @@ class Complaint(restful.Resource):
         }
 
         user = session.get("user")
-
         db.complaint.insert(new_complaint)
 
         new_complaint = serialize_complaint(new_complaint)
         new_complaint["user"] = serialize_user(user)
         new_complaint["comments_count"] = 0
-
-        print "new complaint: "
-        print new_complaint
 
         db.metadata.update(
             {"type": "statistics"},
@@ -624,8 +618,8 @@ class Complaint(restful.Resource):
             {"_id": ObjectId(user["_id"])},
             {
                 "$addToSet": {
-                    "complaints": ObjectId(complaint_id),
-                    "upvotes": ObjectId(complaint_id)
+                    "complaints": new_complaint["_id"],
+                    "upvotes": new_complaint["_id"]
                 }
             }
         )
