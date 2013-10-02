@@ -368,11 +368,14 @@ class ComplaintHot(restful.Resource):
             elif delta == 3:
                 item["score"] = 2 * (uc - dc)
                 item["score"] += len(item["comments"])
-            elif delta > 15 and delta < 30:
+            elif delta > 3 and delta <= 15:
                 item["score"] = (uc - dc)
-            elif delta > 30 and delta < 60:
+                item["score"] += len(item["comments"])
+            elif delta > 15 and delta <= 30:
+                item["score"] = (uc - dc)
+            elif delta > 30 and delta <= 60:
                 item["score"] = 0.8 * (uc - dc)
-            elif delta > 60 and delta < 120:
+            elif delta > 60 and delta <= 120:
                 item["score"] = 0.5 * (uc - dc)
             else:
                 item["score"] = 0.3 * (uc - dc)
