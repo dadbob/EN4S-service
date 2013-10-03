@@ -580,7 +580,7 @@ class Complaint(restful.Resource):
         slug_title = make_slug(title)
 
         pic_arr = data_dict["pic"]
-        filename = byte_array_to_file(pic_arr, city, slug_title)
+        filename = byte_array_to_file(pic_arr, slug_city, slug_title)
 
         number = db.metadata.find_one({"type": "statistics"})
         number = int(number["complaint_count"])
