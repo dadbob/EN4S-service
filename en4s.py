@@ -21,7 +21,7 @@ from PIL import Image
 
 # utils
 from serviceutils import serialize_user, serialize_complaint
-from serviceutils import check_mail, make_slug
+from serviceutils import check_mail, make_slug, get_sinceid
 from serviceutils import get_location_from_city, get_city_and_address
 
 # gravatar needings
@@ -338,6 +338,7 @@ class ComplaintHot(restful.Resource):
 
         l = []
         category = request.args.get('category', '')
+        sinceid = request.args.get('sinceid', '')
 
         if category is "":
             category = "all"
@@ -391,7 +392,11 @@ class ComplaintHot(restful.Resource):
             l.append(item)
 
         sorted_l = sorted(l, key=lambda x: x["score"], reverse=True)
-        sorted_l = sorted_l[:12]
+
+        if sinceid == "":
+            sorted_l = sorted_l[:12]
+        else:
+            sorted_l = get_sinceid(sinceid, sorted_l)
 
         return (sorted_l, 200, {"Cache-Control": "no-cache"})
 

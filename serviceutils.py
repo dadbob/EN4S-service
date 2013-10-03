@@ -2,10 +2,20 @@
 import slugify
 import re
 import requests
+from operator import itemgetter
 
 
 def make_slug(text):
     return slugify.slugify(text.replace(u"ı", u"i"))
+
+
+def get_sinceid(since_id, sorted_list):
+    if since_id == "":
+        return sorted_list[:12]
+    else:
+        since_index = map(itemgetter('id'), sorted_list).index(since_id)
+        since_index = int(since_index)
+        return sorted_list[since_index:since_index + 3]
 
 
 def serialize_complaint(item):
