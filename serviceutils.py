@@ -13,9 +13,12 @@ def get_sinceid(since_id, sorted_list):
     if since_id == "":
         return sorted_list[:12]
     else:
-        since_index = map(itemgetter('id'), sorted_list).index(since_id)
-        since_index = int(since_index)
-        return sorted_list[since_index:since_index + 3]
+        try:
+            since_index = map(itemgetter('_id'), sorted_list).index(since_id)
+            since_index = int(since_index)
+            return (sorted_list[since_index:since_index + 3], 200)
+        except:
+            return ({"error": "no complaint found with that id"}, 404)
 
 
 def serialize_complaint(item):

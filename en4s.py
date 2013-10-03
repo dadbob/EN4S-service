@@ -394,11 +394,11 @@ class ComplaintHot(restful.Resource):
         sorted_l = sorted(l, key=lambda x: x["score"], reverse=True)
 
         if sinceid == "":
-            sorted_l = sorted_l[:12]
+            sorted_l = (sorted_l[:12], 200)
         else:
             sorted_l = get_sinceid(sinceid, sorted_l)
 
-        return (sorted_l, 200, {"Cache-Control": "no-cache"})
+        return sorted_l
 
 
 class CityMeta(restful.Resource):
