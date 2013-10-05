@@ -441,6 +441,7 @@ class ComplaintRecent(restful.Resource):
     def get(self):
         l = []
         category = request.args.get('category', '')
+        sinceid = request.args.get('sinceid', '')
 
         if category is "":
             category = "all"
@@ -461,7 +462,12 @@ class ComplaintRecent(restful.Resource):
             item["user"] = serialize_user(item["user"])
             l.append(item)
 
-        return (l, 200, {"Cache-Control": "no-cache"})
+        if sinceid == "":
+            l = (l[:12], 200)
+        else:
+            l = get_sinceid(sinceid, l)
+
+        return l
 
 
 class ComplaintAll(restful.Resource):
@@ -493,6 +499,7 @@ class ComplaintTop(restful.Resource):
     def get(self):
         l = []
         category = request.args.get('category', '')
+        sinceid = request.args.get('sinceid', '')
 
         if category is "":
             category = "all"
@@ -514,7 +521,12 @@ class ComplaintTop(restful.Resource):
             item["user"] = serialize_user(item["user"])
             l.append(item)
 
-        return (l, 200, {"Cache-Control": "no-cache"})
+        if sinceid == "":
+            l = (l[:12], 200)
+        else:
+            l = get_sinceid(sinceid, l)
+
+        return l
 
 
 class ComplaintNear(restful.Resource):
@@ -526,6 +538,7 @@ class ComplaintNear(restful.Resource):
         lati = request.args.get('latitude', '')
         longi = request.args.get('longitude', '')
         category = request.args.get('category', '')
+        sinceid = request.args.get('sinceid', '')
 
         if category is "":
             category = "all"
@@ -547,7 +560,12 @@ class ComplaintNear(restful.Resource):
             item["user"] = serialize_user(item["user"])
             l.append(item)
 
-        return (l, 200, {"Cache-Control": "no-cache"})
+        if sinceid == "":
+            l = (l[:12], 200)
+        else:
+            l = get_sinceid(sinceid, l)
+
+        return l
 
 
 class Complaint(restful.Resource):
