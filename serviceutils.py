@@ -16,7 +16,7 @@ def get_sinceid(since_id, sorted_list):
         try:
             since_index = map(itemgetter('_id'), sorted_list).index(since_id)
             since_index = int(since_index)
-            return (sorted_list[since_index:since_index + 3], 200)
+            return (sorted_list[since_index + 1:since_index + 4], 200)
         except:
             return ({"error": "no complaint found with that id"}, 404)
 
