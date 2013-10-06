@@ -452,7 +452,7 @@ class ComplaintRecent(restful.Resource):
         else:
             items = db.complaint.find().sort("date", pymongo.DESCENDING)
 
-        items = items[:12]      # limit 10 item
+        items = items[:50]      # limit 10 item
 
         for item in items:
             comments = item.pop("comments")
@@ -511,7 +511,7 @@ class ComplaintTop(restful.Resource):
             items = db.complaint.find().sort("upvote_count",
                                              pymongo.DESCENDING)
 
-        items = items[:12]      # limit 10 item
+        items = items[:50]      # limit 10 item
 
         for item in items:
             comments = item.pop("comments")
@@ -550,7 +550,7 @@ class ComplaintNear(restful.Resource):
         else:
             items = db.complaint.find({"location": {"$near": loc}})
 
-        items = items[:12]      # limit 10 item
+        items = items[:50]      # limit 10 item
 
         for item in items:
             comments = item.pop("comments")
@@ -597,14 +597,20 @@ class Complaint(restful.Resource):
         slug_city = make_slug(city)
         slug_title = make_slug(title)
 
-        pic_arr = data_dict["pic"]
-        filename = byte_array_to_file(pic_arr, slug_city, slug_title)
 
         number = db.metadata.find_one({"type": "statistics"})
         number = int(number["complaint_count"])
         number += 1
+
         slug_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
         public_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
+
+        pic_arr = data_dict["pic"]
+        filename = byte_array_to_file(
+            pic_arr, slug_city,
+            slug_title + "-" + str(number)
+        )
+
         new_complaint = {
             "_id": ObjectId(),
             "title": title,
