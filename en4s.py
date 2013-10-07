@@ -597,7 +597,6 @@ class Complaint(restful.Resource):
         slug_city = make_slug(city)
         slug_title = make_slug(title)
 
-
         number = db.metadata.find_one({"type": "statistics"})
         number = int(number["complaint_count"])
         number += 1
@@ -777,49 +776,63 @@ class ComplaintSingleSlug(restful.Resource):
 
 
 class ComplaintDelete(restful.Resource):
-    method_decorators = [admin_authenticate]
-
     def post(self):
         data_dict = json.loads(request.data)
         picpath = data_dict["picpath"]
         complaint_id = data_dict["complaint_id"]
 
         picpath512 = picpath.replace(".jpg", ".512.jpg")
-        path = "/srv/flask/en4s/uploads"
+        path = "/srv/flask/en4s"
 
         obj_id = ObjectId(unicode(complaint_id))
         obj = db.complaint.find_one({"_id": obj_id})
 
-        db.metadata.update(
-            {"type": "statistics"},
-            {"$inc": {"complaint_count": -1}}
-        )
+        request_user = session.get("user")
+        print request_user
+        if not request_user:
+            return abort(405)
 
-        db.users.update(
-            {"_id": obj["user"]},
-            {"$pull": {"complaints": obj["_id"]}}
-        )
+        print "request_user['_id'] " + unicode(request_user["_id"])
+        print "obj['user']" + unicode(obj["user"])
 
-        db.users.update(
-            {"upvotes": obj["_id"]},
-            {"$pull": {"upvotes": obj["_id"]}},
-            multi=True
-        )
+        flag_owner = request_user["_id"] == unicode(obj["user"])
+        flag_admin = request_user["user_type"] == "admin"
+        print flag_owner
+        print flag_admin
 
-        db.users.update(
-            {"downvotes": obj["_id"]},
-            {"$pull": {"downvotes": obj["_id"]}},
-            multi=True
-        )
+        if not (flag_owner or flag_admin):
+            return abort(405)
+        else:
+            db.metadata.update(
+                {"type": "statistics"},
+                {"$inc": {"complaint_count": -1}}
+            )
 
-        db.complaint.remove({"_id": obj_id})
-        try:
-            os.remove(path + picpath)
-            os.remove(path + picpath512)
-            # print db.complaint.find_one({"_id": obj_id})
-            return {"success": "content deleted"}, 204
-        except:
-            return {"error": "something bad happened on delete"}, 404
+            db.users.update(
+                {"_id": obj["user"]},
+                {"$pull": {"complaints": obj["_id"]}}
+            )
+
+            db.users.update(
+                {"upvotes": obj["_id"]},
+                {"$pull": {"upvotes": obj["_id"]}},
+                multi=True
+            )
+
+            db.users.update(
+                {"downvotes": obj["_id"]},
+                {"$pull": {"downvotes": obj["_id"]}},
+                multi=True
+            )
+
+            db.complaint.remove({"_id": obj_id})
+            try:
+                os.remove(path + picpath)
+                os.remove(path + picpath512)
+                # print db.complaint.find_one({"_id": obj_id})
+                return {"success": "content deleted"}, 204
+            except:
+                return {"error": "something bad happened on delete"}, 404
 
 
 class CommentsNew(restful.Resource):
