@@ -97,6 +97,21 @@ class Login(restful.Resource):
 
         pwd = unicode(data_dict["password"])
         pwd_hash = user["password"]
+
+        if "android_notification" in data_dict:
+            android_id = data_dict["android_notification"]
+            db.users.update(
+                {"_id": user["_id"]},
+                {"$addToSet": {"devices": {"android": android_id}}}
+            )
+
+        if "apple_notification" in data_dict:
+            apple_id = data_dict["apple_notification"]
+            db.users.update(
+                {"_id": user["_id"]},
+                {"$addToSet": {"devices": {"apple": apple_id}}}
+            )
+
         if bcrypt.hashpw(pwd, pwd_hash) != pwd_hash:
             return {'error': 'password is invalid'}, 404
         else:
