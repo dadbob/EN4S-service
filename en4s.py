@@ -661,8 +661,8 @@ class Complaint(restful.Resource):
             {"_id": ObjectId(user["_id"])},
             {
                 "$addToSet": {
-                    "complaints": new_complaint["_id"],
-                    "upvotes": new_complaint["_id"]
+                    "complaints": ObjectId(new_complaint["_id"]),
+                    "upvotes": ObjectId(new_complaint["_id"])
                 }
             }
         )
