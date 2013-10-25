@@ -1,24 +1,15 @@
 # -*- coding: utf-8 -*-
 import slugify
 import re
+import os
+import base64
 import requests
-from operator import itemgetter
+
+from PIL import Image
 
 
 def make_slug(text):
     return slugify.slugify(text.replace(u"ı", u"i"))
-
-
-def get_sinceid(since_id, sorted_list):
-    if since_id == "":
-        return sorted_list[:12]
-    else:
-        try:
-            since_index = map(itemgetter('_id'), sorted_list).index(since_id)
-            since_index = int(since_index)
-            return (sorted_list[since_index + 1:since_index + 4], 200)
-        except:
-            return ({"error": "no complaint found with that id"}, 404)
 
 
 def serialize_complaint(item):
@@ -142,3 +133,36 @@ def get_location_from_city(city):
         return location
     else:
         return None
+
+
+def byte_array_to_file(array, city, h):
+    IMAGEFOLDER = "/srv/flask/en4s/pics/"
+    URL = "/pics/"
+
+    try:
+        os.makedirs(IMAGEFOLDER + city + "/")
+    except:
+        pass
+
+    # new_filename = IMAGEFOLDER + city + "/" +\
+    #            hashlib.sha256(unicode(array)).hexdigest() + ".jpg"
+
+    new_filename = IMAGEFOLDER + city + "/" + h + ".jpg"
+    new_url = URL + city + "/" + h + ".jpg"
+
+    array = base64.b64decode(array)
+
+    file = open(new_filename, "wb")
+    file.write(array)
+    file.close()
+
+    try:
+        for size in [(512, 1000)]:
+            thumbnail_path = IMAGEFOLDER + city + "/" + h + "." + str(size[0]) + ".jpg"
+            im = Image.open(new_filename)
+            im.thumbnail(size, Image.ANTIALIAS)
+            im.save(thumbnail_path, "JPEG")
+    except:
+        print "couldn't save the thumbnails. sorry"
+
+    return new_url

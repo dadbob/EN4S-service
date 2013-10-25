@@ -1,10 +1,11 @@
-import os
+# -*- coding: utf-8 -*-
+import core.users as cuser
+import core.complaints as ccomp
+import core.comments as ccomm
+
 import json
-import base64
-import requests
 import bcrypt
 
-from datetime import datetime
 from functools import wraps
 
 from flask import Flask, request, session
@@ -16,17 +17,9 @@ import settings
 import pymongo
 from bson import ObjectId
 
-# resize
-from PIL import Image
-
 # utils
 from serviceutils import serialize_user, serialize_complaint
-from serviceutils import check_mail, make_slug, get_sinceid
-from serviceutils import get_location_from_city, get_city_and_address
-
-# gravatar needings
-import hashlib
-import urllib
+from serviceutils import get_location_from_city
 
 app = Flask(__name__)
 api = restful.Api(app)
@@ -88,43 +81,20 @@ class Hatirlat(restful.Resource):
 class Login(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
-        user = db.users.find_one(
-            {"email": unicode(data_dict['email'])}
-        )
 
-        if not user:
-            return {'error': 'user not found'}, 404
-
+        email = unicode(data_dict['email'])
         pwd = unicode(data_dict["password"])
-        pwd_hash = user["password"]
+
+        android_id = ""
+        apple_id = ""
 
         if "android_notification" in data_dict:
             android_id = data_dict["android_notification"]
-            db.users.update(
-                {"_id": user["_id"]},
-                {"$addToSet": {"devices": {"android": android_id}}}
-            )
 
         if "apple_notification" in data_dict:
             apple_id = data_dict["apple_notification"]
-            db.users.update(
-                {"_id": user["_id"]},
-                {"$addToSet": {"devices": {"apple": apple_id}}}
-            )
 
-        if bcrypt.hashpw(pwd, pwd_hash) != pwd_hash:
-            return {'error': 'password is invalid'}, 404
-        else:
-            pop_arr = ["password", "complaints",
-                       "upvotes", "downvotes"]
-            for item in pop_arr:
-                if item in user:
-                    user.pop(item, None)
-
-            session['user'] = user
-            session['logged_in'] = True
-            user = serialize_user(user)
-            return user, 200
+        return cuser.login_user(session, email, pwd, android_id, apple_id)
 
 
 class Logout(restful.Resource):
@@ -141,161 +111,20 @@ class FacebookLogin(restful.Resource):
         email = data_dict['email']
         access_token = data_dict['access_token']
 
-        url = "https://graph.facebook.com/me?access_token=" + access_token
-        r = requests.get(url)
-        if r.status_code != 200:
-            return {'error': 'cont login with facebook'}, 400
-        else:
-            user = db.users.find_one(
-                {"email": email}
-            )
-
-            if not user:
-                json_data = r.json()
-
-                if "username" in json_data:
-                    username = json_data["username"]
-                else:
-                    username = json_data["id"]
-
-                if "email" in json_data:
-                    email = json_data["email"]
-                else:
-                    email = username + "@facebook.com"
-
-                avatar_url = "https://graph.facebook.com/"
-                avatar_url += username
-                avatar_url += "/picture?type=square&width=75&height=75"
-
-                meta = db.metadata.find_one()
-                user_count = int(meta["user_count"])
-                user_count = str(user_count + 1)
-                user_slug = make_slug(json_data["name"]) + "-" + user_count
-
-                try:
-                    db.users.insert(
-                        {
-                            "email": email,
-                            "first_name": json_data["first_name"],
-                            "last_name": json_data["last_name"],
-                            "name": json_data["name"],
-                            "complaints": [],
-                            "upvotes": [],
-                            "downvotes": [],
-                            "fbusername": username,
-                            "avatar": avatar_url,
-                            "user_type": "member",
-                            "user_slug": user_slug,
-                            "fb": 1
-                        }
-                    )
-
-                    db.metadata.update(
-                        {"type": "statistics"},
-                        {"$inc": {"user_count": 1}}
-                    )
-
-                    user = db.users.find_one({"email": email})
-
-                    pop_arr = ["password", "complaints",
-                               "upvotes", "downvotes"]
-                    for item in pop_arr:
-                        if item in user:
-                            user.pop(item, None)
-
-                    session['user'] = user
-                    session['logged_in'] = True
-                    user = serialize_user(user)
-                    return user, 200
-                except:
-                    print "[debug] en4s.py line 145"
-                    return {'error': 'cont login with facebook'}, 400
-            else:
-                if user['fb'] == 0:
-                    if "username" in json_data:
-                        username = json_data["username"]
-                    else:
-                        username = json_data["id"]
-
-                    user['fbusername'] = username
-                    user['fb'] = 1
-                    db.users.save(user)
-
-                pop_arr = ["password", "complaints", "upvotes", "downvotes"]
-                for item in pop_arr:
-                    if item in user:
-                        user.pop(item, None)
-
-                session['user'] = user
-                session['logged_in'] = True
-                user = serialize_user(user)
-                return user, 200
+        return cuser.login_user_with_facebook(session, email, access_token)
 
 
 class Register(restful.Resource):
-    # todo validate email
-
     def post(self):
         data_dict = json.loads(request.data)
 
         email = unicode(data_dict['email'])
+        password = unicode(data_dict['password'])
         first_name = unicode(data_dict['first_name'])
         last_name = unicode(data_dict['last_name'])
-        name = first_name + " " + last_name
-        password = unicode(data_dict['password'])
-        password = bcrypt.hashpw(password, bcrypt.gensalt())
 
-        default = "http://enforceapp.com/static/img/enforce-avatar-small.png"
-        size = 75
-        gravatar_url = "http://www.gravatar.com/avatar/" +\
-                       hashlib.md5(email.lower()).hexdigest() + "?"
-
-        gravatar_url += urllib.urlencode({'d': default, 's': str(size)})
-
-        meta = db.metadata.find_one()
-        user_count = int(meta["user_count"])
-        user_count = str(user_count + 1)
-        user_slug = make_slug(name) + "-" + user_count
-
-        user = {
-            "email": email,
-            "first_name": first_name,
-            "last_name": last_name,
-            "avatar": gravatar_url,
-            "name": name,
-            "complaints": [],
-            "upvotes": [],
-            "downvotes": [],
-            "password": password,
-            "user_type": "member",
-            "user_slug": user_slug,
-            "fb": 0
-        }
-
-        if not (email or password):
-            return {'error': 'email or password not given'}, 404
-        else:
-            if check_mail(email):
-
-                db.users.insert(user)
-
-                pop_arr = ["password", "complaints", "upvotes", "downvotes"]
-                for item in pop_arr:
-                    if item in user:
-                        user.pop(item, None)
-
-                session["user"] = user
-                session["logged_in"] = True
-                user = serialize_user(user)
-
-                db.metadata.update(
-                    {"type": "statistics"},
-                    {"$inc": {"user_count": 1}}
-                )
-
-                return user, 201
-            else:
-                return {'error': "mail address is not valid"}, 404
+        return cuser.register_user(
+            session, email, password, first_name, last_name)
 
 
 class ProfileUpdate(restful.Resource):
@@ -311,17 +140,7 @@ class ProfileUpdate(restful.Resource):
             twitter = data_dict["twitter"]
             website = data_dict["website"]
 
-            db.users.update(
-                {"_id": ObjectId(userid)},
-                {"$set": {"twitter": twitter, "website": website}}
-            )
-
-            user = db.users.find_one({"_id": ObjectId(userid)})
-            user.pop("password", None)
-            session['user'] = user
-            session['logged_in'] = True
-            user = serialize_user(user)
-            return user, 200
+            return cuser.update_profile_info(session, user, twitter, website)
         elif update_type == "password":
             userid = user["_id"]
             user = db.users.find_one({"email": unicode(user['email'])})
@@ -344,76 +163,6 @@ class ProfileUpdate(restful.Resource):
                 return 200
 
         return 402
-
-
-class ComplaintHot(restful.Resource):
-    def get(self):
-
-        current_time = datetime.now()
-
-        l = []
-        category = request.args.get('category', '')
-        sinceid = request.args.get('sinceid', '')
-
-        if category is "":
-            category = "all"
-
-        if category is not 'all':
-            items = db.complaint.find({"category": category})
-            items = items.sort("date", pymongo.DESCENDING)
-        else:
-            items = db.complaint.find().sort("date", pymongo.DESCENDING)
-
-        items = items[:50]      # limit 50 before sorting with scores
-        for item in items:
-            complaint_time = item["date"]
-            delta = (current_time - complaint_time).days
-
-            uc = item["upvote_count"]
-            dc = item["downvote_count"]
-
-            if delta == 0:
-                item["score"] = 7 * (uc - dc)
-                item["score"] += 2 * len(item["comments"])
-            elif delta == 1:
-                item["score"] = 5 * (uc - dc)
-                item["score"] += len(item["comments"])
-            elif delta == 2:
-                item["score"] = 3 * (uc - dc)
-                item["score"] += len(item["comments"])
-            elif delta == 3:
-                item["score"] = 2 * (uc - dc)
-                item["score"] += len(item["comments"])
-            elif delta > 3 and delta <= 15:
-                item["score"] = (uc - dc)
-                item["score"] += len(item["comments"])
-            elif delta > 15 and delta <= 30:
-                item["score"] = (uc - dc)
-            elif delta > 30 and delta <= 60:
-                item["score"] = 0.8 * (uc - dc)
-            elif delta > 60 and delta <= 120:
-                item["score"] = 0.5 * (uc - dc)
-            else:
-                item["score"] = 0.3 * (uc - dc)
-
-            if int(item["downvote_count"]) >= int(item["upvote_count"]):
-                item["score"] = 0
-
-            comments = item.pop("comments")
-            item["comments_count"] = len(comments)
-            item = serialize_complaint(item)
-            item["user"] = db.users.find_one({"_id": item["user"]})
-            item["user"] = serialize_user(item["user"])
-            l.append(item)
-
-        sorted_l = sorted(l, key=lambda x: x["score"], reverse=True)
-
-        if sinceid == "":
-            sorted_l = (sorted_l[:12], 200)
-        else:
-            sorted_l = get_sinceid(sinceid, sorted_l)
-
-        return sorted_l
 
 
 class CityMeta(restful.Resource):
@@ -452,342 +201,84 @@ class City(restful.Resource):
         return (l, 200, {"Cache-Control": "no-cache"})
 
 
-class ComplaintRecent(restful.Resource):
+class ComplaintHot(restful.Resource):
     def get(self):
-        l = []
         category = request.args.get('category', '')
         sinceid = request.args.get('sinceid', '')
+        slug_city = request.args.get('slugcity', '')
+        return ccomp.get_hot_complaints(category, sinceid, slug_city)
 
-        if category is "":
-            category = "all"
 
-        if category is not 'all':
-            items = db.complaint.find({"category": category})
-            items = items.sort("date", pymongo.DESCENDING)
-        else:
-            items = db.complaint.find().sort("date", pymongo.DESCENDING)
-
-        items = items[:50]      # limit 10 item
-
-        for item in items:
-            comments = item.pop("comments")
-            item["comments_count"] = len(comments)
-            item = serialize_complaint(item)
-            item["user"] = db.users.find_one({"_id": item["user"]})
-            item["user"] = serialize_user(item["user"])
-            l.append(item)
-
-        if sinceid == "":
-            l = (l[:12], 200)
-        else:
-            l = get_sinceid(sinceid, l)
-
-        return l
+class ComplaintRecent(restful.Resource):
+    def get(self):
+        category = request.args.get('category', '')
+        sinceid = request.args.get('sinceid', '')
+        slug_city = request.args.get('slugcity', '')
+        return ccomp.get_recent_complaints(category, sinceid, slug_city)
 
 
 class ComplaintAll(restful.Resource):
     def get(self):
-        l = []
         category = request.args.get('category', '')
-
-        if category is "":
-            category = "all"
-
-        if category is not 'all':
-            items = db.complaint.find({"category": category})
-            items = items.sort("date", pymongo.DESCENDING)
-        else:
-            items = db.complaint.find().sort("date", pymongo.DESCENDING)
-
-        for item in items:
-            # comments = item.pop("comments")
-            # item["comments_count"] = len(comments)
-            item = serialize_complaint(item)
-            item["user"] = db.users.find_one({"_id": item["user"]})
-            item["user"] = serialize_user(item["user"])
-            l.append(item)
-
-        return (l, 200, {"Cache-Control": "no-cache"})
+        slug_city = request.args.get('slugcity', '')
+        return ccomp.get_all_complaints(category, slug_city)
 
 
 class ComplaintTop(restful.Resource):
     def get(self):
-        l = []
         category = request.args.get('category', '')
         sinceid = request.args.get('sinceid', '')
-
-        if category is "":
-            category = "all"
-
-        if category is not 'all':
-            items = db.complaint.find({"category": category})
-            items = items.sort("upvote_count", pymongo.DESCENDING)
-        else:
-            items = db.complaint.find().sort("upvote_count",
-                                             pymongo.DESCENDING)
-
-        items = items[:50]      # limit 10 item
-
-        for item in items:
-            comments = item.pop("comments")
-            item["comments_count"] = len(comments)
-            item = serialize_complaint(item)
-            item["user"] = db.users.find_one({"_id": item["user"]})
-            item["user"] = serialize_user(item["user"])
-            l.append(item)
-
-        if sinceid == "":
-            l = (l[:12], 200)
-        else:
-            l = get_sinceid(sinceid, l)
-
-        return l
+        slug_city = request.args.get('slugcity', '')
+        return ccomp.get_top_complaints(category, sinceid, slug_city)
 
 
 class ComplaintNear(restful.Resource):
-    # method_decorators = [authenticate]
-
     def get(self):
-        l = []
-
         lati = request.args.get('latitude', '')
         longi = request.args.get('longitude', '')
         category = request.args.get('category', '')
         sinceid = request.args.get('sinceid', '')
-
-        if category is "":
-            category = "all"
-
-        loc = [float(lati), float(longi)]
-        if category is not 'all':
-            items = db.complaint.find({"category": category,
-                                       "location": {"$near": loc}})
-        else:
-            items = db.complaint.find({"location": {"$near": loc}})
-
-        items = items[:50]      # limit 10 item
-
-        for item in items:
-            comments = item.pop("comments")
-            item["comments_count"] = len(comments)
-            item = serialize_complaint(item)
-            item["user"] = db.users.find_one({"_id": item["user"]})
-            item["user"] = serialize_user(item["user"])
-            l.append(item)
-
-        if sinceid == "":
-            l = (l[:12], 200)
-        else:
-            l = get_sinceid(sinceid, l)
-
-        return l
+        slug_city = request.args.get('slugcity', '')
+        return ccomp.get_near_complaints(
+            lati, longi, category, sinceid, slug_city)
 
 
-class Complaint(restful.Resource):
-    # todo new_complaint olusturmaya gerek yok
-    # direk request.data'ya olmayan verileri ekle
-    # ve database'e ekle
-
+class ComplaintNew(restful.Resource):
     method_decorators = [authenticate]
 
-    def get(self):
-        l = []
-        for item in db.complaint.find():
-            item["_id"] = unicode(item["_id"])
-            item["date"] = unicode(item["date"])
-            l.append(item)
-
-        return (l, 200, {"Cache-Control": "no-cache"})
-
     def post(self):
-        user = session["user"]
         data_dict = json.loads(request.data.decode("utf-8"))
-
         location = data_dict['location']
-        address_info = get_city_and_address(location)
-        city = address_info[0]
-        address = address_info[1]
-
         title = unicode(data_dict['title'])
-        slug_city = make_slug(city)
-        slug_title = make_slug(title)
-
-        number = db.metadata.find_one({"type": "statistics"})
-        number = int(number["complaint_count"])
-        number += 1
-
-        slug_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
-        public_url = "/" + slug_city + "/" + slug_title + "-" + str(number)
-
         pic_arr = data_dict["pic"]
-        filename = byte_array_to_file(
-            pic_arr, slug_city,
-            slug_title + "-" + str(number)
-        )
+        category = data_dict["category"]
 
-        new_complaint = {
-            "_id": ObjectId(),
-            "title": title,
-            "user": ObjectId(user["_id"]),
-            "pics": [filename],
-            "slug_city": slug_city,
-            "slug_url": slug_url,
-            "public_url": public_url,
-            "category": data_dict['category'],
-            "comments": [],
-            "upvoters": [user["_id"]],
-            "downvoters": [],
-            "upvote_count": 1,
-            "downvote_count": 0,
-            "location": location,
-            "address": address,
-            "city": city,
-            "date": datetime.now()
-        }
-
-        user = session.get("user")
-        db.complaint.insert(new_complaint)
-
-        new_complaint = serialize_complaint(new_complaint)
-        new_complaint["user"] = serialize_user(user)
-        new_complaint["comments_count"] = 0
-
-        db.metadata.update(
-            {"type": "statistics"},
-            {"$inc": {"complaint_count": 1}}
-        )
-
-        db.users.update(
-            {"_id": ObjectId(user["_id"])},
-            {
-                "$addToSet": {
-                    "complaints": ObjectId(new_complaint["_id"]),
-                    "upvotes": ObjectId(new_complaint["_id"])
-                }
-            }
-        )
-
-        return new_complaint, 201
+        return ccomp.post_new_complaint(
+            session, location, title, pic_arr, category)
 
 
 class ComplaintUpvote(restful.Resource):
     method_decorators = [authenticate]
 
     def put(self, obj_id):
-        obj_id = ObjectId(unicode(obj_id))
-        obj = db.complaint.find_one({"_id": obj_id})
-        if not obj:
-            return abort(404)
-
-        upvoters = obj["upvoters"]
-        downvoters = obj["downvoters"]
-
-        user = session["user"]
-        if not user:
-            return abort(404)
-        user_id = ObjectId(user["_id"])
-
-        if user_id in upvoters:
-            return {"error": "user already upvoted"}, 406
-        elif user_id in downvoters:
-            return {"error": "user already voted"}, 406
-
-        db.complaint.update(
-            {"_id": obj_id},
-            {"$addToSet": {"upvoters": user_id}}
-        )
-
-        db.complaint.update(
-            {"_id": obj_id}, {"$inc": {"upvote_count": 1}}
-        )
-
-        db.users.update(
-            {"_id": user_id},
-            {"$addToSet": {"upvotes": obj_id}}
-        )
-
-        return {"success": "upvote accepted"}, 202
+        return ccomp.upvote_complaint(session, obj_id)
 
 
 class ComplaintDownvote(restful.Resource):
     method_decorators = [authenticate]
 
     def put(self, obj_id):
-        obj_id = ObjectId(unicode(obj_id))
-        obj = db.complaint.find_one({"_id": obj_id})
-        if not obj:
-            return abort(404)
-
-        upvoters = obj["upvoters"]
-        downvoters = obj["downvoters"]
-
-        user = session["user"]
-        if not user:
-            return abort(404)
-        user_id = ObjectId(user["_id"])
-
-        if user_id in upvoters:
-            return {"error": "user already voted"}, 406
-        elif user_id in downvoters:
-            return {"error": "user already voted"}, 406
-
-        db.complaint.update(
-            {"_id": obj_id},
-            {"$addToSet": {"downvoters": user_id}}
-        )
-
-        db.complaint.update(
-            {"_id": obj_id}, {"$inc": {"downvote_count": 1}}
-        )
-
-        db.users.update(
-            {"_id": user_id},
-            {"$addToSet": {"downvotes": obj_id}}
-        )
-
-        return {"success": "downvote accepted"}, 202
+        return ccomp.downvote_complaint(session, obj_id)
 
 
 class ComplaintSingle(restful.Resource):
     def get(self, obj_id):
-        obj_id = ObjectId(unicode(obj_id))
-        obj = db.complaint.find_one({"_id": obj_id})
-
-        if not obj:
-            return abort(404)
-
-        obj = serialize_complaint(obj)
-        obj["user"] = db.users.find_one({"_id": obj["user"]})
-        obj["user"] = serialize_user(obj["user"])
-
-        for comment in obj["comments"]:
-            comment["author"] = db.users.find_one({
-                "_id": ObjectId(comment["author"])
-            })
-            comment["author"] = serialize_user(comment["author"])
-
-        return obj
+        return ccomp.get_complaint_with_id(obj_id)
 
 
 class ComplaintSingleSlug(restful.Resource):
     def get(self, city, slug):
-        path = "/" + city + "/" + slug
-        obj = db.complaint.find_one({"slug_url": path})
-
-        if not obj:
-            return abort(404)
-
-        obj = serialize_complaint(obj)
-        obj["user"] = db.users.find_one({"_id": obj["user"]})
-        obj["user"] = serialize_user(obj["user"])
-
-        for comment in obj["comments"]:
-            comment["author"] = db.users.find_one({
-                "_id": ObjectId(comment["author"])
-            })
-            comment["author"] = serialize_user(comment["author"])
-
-        return obj
+        return ccomp.get_complaint_with_slug(city, slug)
 
 
 class ComplaintDelete(restful.Resource):
@@ -795,59 +286,13 @@ class ComplaintDelete(restful.Resource):
         data_dict = json.loads(request.data)
         picpath = data_dict["picpath"]
         complaint_id = data_dict["complaint_id"]
+        return ccomp.delete_complaint(session, picpath, complaint_id)
 
-        picpath512 = picpath.replace(".jpg", ".512.jpg")
-        path = "/srv/flask/en4s"
 
+class CommentsGet(restful.Resource):
+    def get(self, complaint_id):
         obj_id = ObjectId(unicode(complaint_id))
-        obj = db.complaint.find_one({"_id": obj_id})
-
-        request_user = session.get("user")
-        print request_user
-        if not request_user:
-            return abort(405)
-
-        print "request_user['_id'] " + unicode(request_user["_id"])
-        print "obj['user']" + unicode(obj["user"])
-
-        flag_owner = request_user["_id"] == unicode(obj["user"])
-        flag_admin = request_user["user_type"] == "admin"
-        print flag_owner
-        print flag_admin
-
-        if not (flag_owner or flag_admin):
-            return abort(405)
-        else:
-            db.metadata.update(
-                {"type": "statistics"},
-                {"$inc": {"complaint_count": -1}}
-            )
-
-            db.users.update(
-                {"_id": obj["user"]},
-                {"$pull": {"complaints": obj["_id"]}}
-            )
-
-            db.users.update(
-                {"upvotes": obj["_id"]},
-                {"$pull": {"upvotes": obj["_id"]}},
-                multi=True
-            )
-
-            db.users.update(
-                {"downvotes": obj["_id"]},
-                {"$pull": {"downvotes": obj["_id"]}},
-                multi=True
-            )
-
-            db.complaint.remove({"_id": obj_id})
-            try:
-                os.remove(path + picpath)
-                os.remove(path + picpath512)
-                # print db.complaint.find_one({"_id": obj_id})
-                return {"success": "content deleted"}, 204
-            except:
-                return {"error": "something bad happened on delete"}, 404
+        return ccomm.get_comments_from_complaint(obj_id)
 
 
 class CommentsNew(restful.Resource):
@@ -855,69 +300,8 @@ class CommentsNew(restful.Resource):
 
     def put(self, complaint_id):
         data_dict = json.loads(request.data)
-        user = session.get("user")
-
-        obj_id = ObjectId(unicode(complaint_id))
-        complaint_obj = db.complaint.find_one({"_id": obj_id})
-        if not complaint_obj:
-            return abort(404)
-
-        comment_data = {}
-        comment_data["_id"] = ObjectId()
-        comment_data["date"] = datetime.now()
-        comment_data["author"] = user["_id"]
-        comment_data["text"] = data_dict["text"]
-        comment_data["like"] = 0
-        comment_data["dislike"] = 0
-
-        db.complaint.update(
-            {"_id": obj_id},
-            {"$addToSet": {"comments": comment_data}}
-        )
-
-        db.metadata.update(
-            {"type": "statistics"},
-            {"$inc": {"comment_count": 1}}
-        )
-
-        comment_data["date"] = str(comment_data["date"])
-        comment_data["_id"] = str(comment_data["_id"])
-        comment_data["author"] = db.users.find_one(
-            {"_id": ObjectId(comment_data["author"])}
-        )
-        comment_data["author"] = serialize_user(comment_data["author"])
-
-        return comment_data, 201
-
-
-class CommentsVote(restful.Resource):
-    method_decorators = [authenticate]
-
-    def put(self, complaint_id):
-        data_dict = json.loads(request.data)
-
-        obj_id = ObjectId(unicode(complaint_id))
-        complaint_obj = db.complaint.find_one({"_id": obj_id})
-        if not complaint_obj:
-            return abort(404)
-
-        comment_id = data_dict["comment_id"]
-        vote_type = data_dict["vote_type"]
-
-        for comment in complaint_obj["comments"]:
-            print comment["_id"]
-            print comment_id
-            if str(comment["_id"]) == str(comment_id):
-                like_count = int(comment["like"])
-                if vote_type == "upvote":
-                    like_count += 1
-                elif vote_type == "downvote":
-                    like_count -= 1
-                comment["like"] = like_count
-                db.complaint.save(complaint_obj)
-                return {"success": "upvote accepted"}, 202
-
-        return abort(404)
+        text = data_dict["text"]
+        return ccomm.put_new_comment(session, complaint_id, text)
 
 
 class CommentsDelete(restful.Resource):
@@ -925,43 +309,9 @@ class CommentsDelete(restful.Resource):
 
     def post(self):
         data_dict = json.loads(request.data)
-        obj_id = data_dict["complaint_id"]
+        complaint_id = data_dict["complaint_id"]
         comment_id = data_dict["comment_id"]
-
-        db.complaint.update(
-            {"_id": ObjectId(obj_id)},
-            {"$pull": {"comments": {"_id": ObjectId(comment_id)}}}
-        )
-
-        db.metadata.update(
-            {"type": "statistics"},
-            {"$inc": {"comment_count": -1}}
-        )
-
-        return 200
-
-
-class Comments(restful.Resource):
-    def get(self, complaint_id):
-        obj_id = ObjectId(unicode(complaint_id))
-        complaint_obj = db.complaint.find_one({"_id": obj_id})
-        if not complaint_obj:
-            return abort(404)
-
-        comments = []
-
-        for comment in complaint_obj["comments"]:
-            try:
-                comment["date"] = str(comment["date"])
-                comment["_id"] = str(comment["_id"])
-                comment["author"] = db.users.find_one(
-                    {"_id": ObjectId(comment["author"])}
-                )
-                comment["author"] = serialize_user(comment["author"])
-                comments.append(comment)
-            except:
-                pass
-        return comments, 200
+        return ccomm.delete_comment(complaint_id, comment_id)
 
 
 class UserAll(restful.Resource):
@@ -977,90 +327,32 @@ class UserAll(restful.Resource):
 
 class User(restful.Resource):
     def get(self, userslug):
-        user = db.users.find_one({"user_slug": userslug})
-        if not user:
-            return abort(404)
-
-        user = serialize_user(user)
-        cmps = []
-        for complaint in user["complaints"]:
-            temp_cmp = db.complaint.find_one({"_id": ObjectId(complaint)})
-            temp_cmp.pop("user")
-            comments = temp_cmp.pop("comments")
-            temp_cmp["comments_count"] = len(comments)
-            temp_cmp = serialize_complaint(temp_cmp)
-            cmps.append(temp_cmp)
-        user["complaints"] = cmps
-
-        upvts = []
-        for upvote in user["upvotes"]:
-            temp_upvote = db.complaint.find_one({"_id": ObjectId(upvote)})
-            temp_upvote.pop("user")
-            comments = temp_upvote.pop("comments")
-            temp_upvote["comments_count"] = len(comments)
-            temp_upvote = serialize_complaint(temp_upvote)
-            upvts.append(temp_upvote)
-        user["upvotes"] = upvts
-
-        return user, 200
+        return cuser.get_user_with_slug(userslug)
 
 
-def byte_array_to_file(array, city, h):
-    IMAGEFOLDER = "/srv/flask/en4s/pics/"
-    URL = "/pics/"
-
-    try:
-        os.makedirs(IMAGEFOLDER + city + "/")
-    except:
-        pass
-
-    # new_filename = IMAGEFOLDER + city + "/" +\
-    #            hashlib.sha256(unicode(array)).hexdigest() + ".jpg"
-
-    new_filename = IMAGEFOLDER + city + "/" + h + ".jpg"
-    new_url = URL + city + "/" + h + ".jpg"
-
-    array = base64.b64decode(array)
-
-    file = open(new_filename, "wb")
-    file.write(array)
-    file.close()
-
-    try:
-        for size in [(512, 1000)]:
-            thumbnail_path = IMAGEFOLDER + city + "/" + h + "." + str(size[0]) + ".jpg"
-            im = Image.open(new_filename)
-            im.thumbnail(size, Image.ANTIALIAS)
-            im.save(thumbnail_path, "JPEG")
-    except:
-        print "couldn't save the thumbnails. sorry"
-
-    return new_url
-
-api.add_resource(Hatirlat, '/hatirlat')
-api.add_resource(Login, '/login')
-api.add_resource(Logout, '/logout')
-api.add_resource(ProfileUpdate, '/profileupdate')
-api.add_resource(FacebookLogin, '/login/facebook')
-api.add_resource(Register, '/register')
-api.add_resource(Complaint, '/complaint')
+api.add_resource(Hatirlat, '/user/hatirlat')
+api.add_resource(Login, '/user/login')
+api.add_resource(Logout, '/user/logout')
+api.add_resource(ProfileUpdate, '/user/profileupdate')
+api.add_resource(FacebookLogin, '/user/login/facebook')
+api.add_resource(Register, '/user/register')
+api.add_resource(User, '/user/<string:userslug>')
+api.add_resource(UserAll, '/user/all')
+api.add_resource(ComplaintNew, '/complaint/new')
 api.add_resource(ComplaintDelete, '/complaint/delete')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
 api.add_resource(ComplaintSingleSlug, '/slug/<string:city>/<string:slug>')
-api.add_resource(ComplaintUpvote, '/complaint/<string:obj_id>/upvote')
-api.add_resource(ComplaintDownvote, '/complaint/<string:obj_id>/downvote')
+api.add_resource(ComplaintUpvote, '/complaint/upvote/<string:obj_id>')
+api.add_resource(ComplaintDownvote, '/complaint/downvote/<string:obj_id>')
 api.add_resource(ComplaintRecent, '/complaint/recent')
 api.add_resource(ComplaintHot, '/complaint/hot')
 api.add_resource(ComplaintAll, '/complaint/all')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
 api.add_resource(City, '/<string:city>')
-api.add_resource(User, '/user/<string:userslug>')
-api.add_resource(UserAll, '/user/all')
 api.add_resource(CityMeta, '/<string:city>/citymeta')
-api.add_resource(Comments, '/comments/<string:complaint_id>')
+api.add_resource(CommentsGet, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
-api.add_resource(CommentsVote, '/comments/vote/<string:complaint_id>')
 api.add_resource(CommentsDelete, '/comments/delete')
 
 if __name__ == '__main__':
