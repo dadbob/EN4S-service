@@ -2,6 +2,7 @@
 import core.users as cuser
 import core.complaints as ccomp
 import core.comments as ccomm
+import core.gov as cgov
 
 import json
 import bcrypt
@@ -250,7 +251,7 @@ class ComplaintNew(restful.Resource):
         data_dict = json.loads(request.data.decode("utf-8"))
         location = data_dict['location']
         title = unicode(data_dict['title'])
-        pic_arr = data_dict["pic"]
+        pic_arr = data_dict["pic_arr"]
         category = data_dict["category"]
 
         return ccomp.post_new_complaint(
@@ -330,6 +331,17 @@ class User(restful.Resource):
         return cuser.get_user_with_slug(userslug)
 
 
+class LoginGov(restful.Resource):
+    def post(self):
+        data_dict = json.loads(request.data)
+
+        govname = unicode(data_dict.get("govname", ""))
+        pwd = unicode(data_dict.get("password", ""))
+
+        return cgov.login_gov(session, govname, pwd)
+
+
+# user resources
 api.add_resource(Hatirlat, '/user/hatirlat')
 api.add_resource(Login, '/user/login')
 api.add_resource(Logout, '/user/logout')
@@ -338,6 +350,8 @@ api.add_resource(FacebookLogin, '/user/login/facebook')
 api.add_resource(Register, '/user/register')
 api.add_resource(User, '/user/<string:userslug>')
 api.add_resource(UserAll, '/user/all')
+
+# complaint resources
 api.add_resource(ComplaintNew, '/complaint/new')
 api.add_resource(ComplaintDelete, '/complaint/delete')
 api.add_resource(ComplaintSingle, '/complaint/<string:obj_id>')
@@ -349,11 +363,18 @@ api.add_resource(ComplaintHot, '/complaint/hot')
 api.add_resource(ComplaintAll, '/complaint/all')
 api.add_resource(ComplaintTop, '/complaint/top')
 api.add_resource(ComplaintNear, '/complaint/near')
+
+# city data
 api.add_resource(City, '/<string:city>')
 api.add_resource(CityMeta, '/<string:city>/citymeta')
+
+# comments
 api.add_resource(CommentsGet, '/comments/<string:complaint_id>')
 api.add_resource(CommentsNew, '/comments/<string:complaint_id>')
 api.add_resource(CommentsDelete, '/comments/delete')
+
+# govs
+api.add_resource(LoginGov, '/gov/login')
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG
