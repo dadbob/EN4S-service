@@ -166,6 +166,33 @@ class ProfileUpdate(restful.Resource):
         return 402
 
 
+class UserAll(restful.Resource):
+    def get(self):
+        users = db.users.find()
+        serialized_users = []
+        for user in users:
+            temp_user = serialize_user(user)
+            serialized_users.append(temp_user)
+
+        return serialized_users, 200
+
+
+class User(restful.Resource):
+    def get(self, userslug):
+        return cuser.get_user_with_slug(userslug)
+
+
+class UpdateUserCity(restful.Resource):
+    method_decorators = [authenticate]
+
+    def put(self):
+        data_dict = json.loads(request.data)
+        current_city = unicode(data_dict['current_city'])
+
+        user = session.get("user")
+        return cuser.update_user_city(session, user, current_city)
+
+
 class CityMeta(restful.Resource):
     def get(self, city):
         location = get_location_from_city(city)
@@ -315,22 +342,6 @@ class CommentsDelete(restful.Resource):
         return ccomm.delete_comment(complaint_id, comment_id)
 
 
-class UserAll(restful.Resource):
-    def get(self):
-        users = db.users.find()
-        serialized_users = []
-        for user in users:
-            temp_user = serialize_user(user)
-            serialized_users.append(temp_user)
-
-        return serialized_users, 200
-
-
-class User(restful.Resource):
-    def get(self, userslug):
-        return cuser.get_user_with_slug(userslug)
-
-
 class LoginGov(restful.Resource):
     def post(self):
         data_dict = json.loads(request.data)
@@ -350,6 +361,7 @@ api.add_resource(FacebookLogin, '/user/login/facebook')
 api.add_resource(Register, '/user/register')
 api.add_resource(User, '/user/<string:userslug>')
 api.add_resource(UserAll, '/user/all')
+api.add_resource(UpdateUserCity, '/user/updatecity')
 
 # complaint resources
 api.add_resource(ComplaintNew, '/complaint/new')

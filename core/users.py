@@ -275,3 +275,24 @@ def update_profile_info(session, user, twitter, website):
     session['logged_in'] = True
     user = serialize_user(user)
     return user, 200
+
+
+def update_user_city(session, user, current_city):
+    """
+
+    Arguments:
+    - `session`:
+    - `user`:
+    - `city`:
+    """
+    userid = user["_id"]
+    db.users.update(
+        {"_id": ObjectId(userid)},
+        {"$set": {"current_city"}}
+    )
+    user = db.users.find_one({"_id": ObjectId(userid)})
+    user = cleanup_user_for_session(user)
+    session['user'] = user
+    session['logged_in'] = True
+    user = serialize_user(user)
+    return user, 202
