@@ -322,7 +322,7 @@ def update_user_city(session, user, current_city):
     userid = user["_id"]
     db.users.update(
         {"_id": ObjectId(userid)},
-        {"$set": {"current_city"}}
+        {"$set": {"current_city": current_city}}
     )
     user = db.users.find_one({"_id": ObjectId(userid)})
     user = cleanup_user_for_session(user)
