@@ -86,16 +86,14 @@ class Login(restful.Resource):
         email = unicode(data_dict['email'])
         pwd = unicode(data_dict["password"])
 
-        android_id = ""
-        apple_id = ""
+        current_city = data_dict.get("current_city", "")
+        android_id = data_dict.get("android_notification", "")
+        apple_id = data_dict.get("apple_notification")
 
-        if "android_notification" in data_dict:
-            android_id = data_dict["android_notification"]
-
-        if "apple_notification" in data_dict:
-            apple_id = data_dict["apple_notification"]
-
-        return cuser.login_user(session, email, pwd, android_id, apple_id)
+        return cuser.login_user(
+            session, email, pwd, android_id, apple_id,
+            current_city=current_city
+        )
 
 
 class Logout(restful.Resource):
@@ -112,7 +110,14 @@ class FacebookLogin(restful.Resource):
         email = data_dict['email']
         access_token = data_dict['access_token']
 
-        return cuser.login_user_with_facebook(session, email, access_token)
+        current_city = data_dict.get("current_city", "")
+        android_id = data_dict.get("android_notification", "")
+        apple_id = data_dict.get("apple_notification")
+
+        return cuser.login_user_with_facebook(
+            session, email, access_token,
+            android_id, apple_id, current_city
+        )
 
 
 class Register(restful.Resource):
