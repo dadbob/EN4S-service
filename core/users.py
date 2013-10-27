@@ -28,7 +28,7 @@ def cleanup_user_for_session(user):
 
 
 def login_user(session, email, password, android_id="",
-               apple_id=""):
+               apple_id="", current_city=""):
     """
 
     Arguments:
@@ -61,6 +61,16 @@ def login_user(session, email, password, android_id="",
                 {"$addToSet": {"devices": {"apple": apple_id}}}
             )
 
+        if current_city:
+            db.users.update(
+                {"_id": user["_id"]},
+                {"$set": {"current_city": current_city}}
+            )
+
+        user = db.users.find_one(
+            {"email": email}
+        )
+
         user = cleanup_user_for_session(user)
         session['user'] = user
         session['logged_in'] = True
@@ -69,7 +79,8 @@ def login_user(session, email, password, android_id="",
         return user, 200
 
 
-def login_user_with_facebook(session, email, access_token):
+def login_user_with_facebook(session, email, access_token,
+                             android_id="", apple_id="", current_city=""):
     """
 
     Arguments:
@@ -115,6 +126,8 @@ def login_user_with_facebook(session, email, access_token):
                         "first_name": json_data["first_name"],
                         "last_name": json_data["last_name"],
                         "name": json_data["name"],
+                        "devices": [],
+                        "current_city": "",
                         "complaints": [],
                         "upvotes": [],
                         "downvotes": [],
@@ -149,6 +162,27 @@ def login_user_with_facebook(session, email, access_token):
                 user['fbusername'] = username
                 user['fb'] = 1
                 db.users.save(user)
+
+            if android_id:
+                db.users.update(
+                    {"_id": user["_id"]},
+                    {"$addToSet": {"devices": {"android": android_id}}}
+                )
+            elif apple_id:
+                db.users.update(
+                    {"_id": user["_id"]},
+                    {"$addToSet": {"devices": {"apple": apple_id}}}
+                )
+
+            if current_city:
+                db.users.update(
+                    {"_id": user["_id"]},
+                    {"$set": {"current_city": current_city}}
+                )
+
+            user = db.users.find_one(
+                {"email": email}
+            )
 
             user = cleanup_user_for_session(user)
             session['user'] = user
