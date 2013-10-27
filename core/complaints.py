@@ -234,8 +234,7 @@ def get_all_complaints(category, slug_city):
     items = filter_with_category_and_city(category, slug_city)
     l = []
     for item in items:
-        comments = item.pop("comments")
-        item["comments_count"] = len(comments)
+        item["comments_count"] = len(item["comments"])
         item = serialize_complaint(item)
         item["user"] = db.users.find_one({"_id": item["user"]})
         item["user"] = serialize_user(item["user"])
