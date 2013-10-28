@@ -357,6 +357,14 @@ class LoginGov(restful.Resource):
         return cgov.login_gov(session, govname, pwd)
 
 
+class LogoutGov(restful.Resource):
+    def post(self):
+
+        session['gov'] = None
+        session['logged_in'] = False
+        return {"success": "successfuly logged out"}, 200
+
+
 # user resources
 api.add_resource(Hatirlat, '/user/hatirlat')
 api.add_resource(Login, '/user/login')
@@ -392,6 +400,7 @@ api.add_resource(CommentsDelete, '/comments/delete')
 
 # govs
 api.add_resource(LoginGov, '/gov/login')
+api.add_resource(LogoutGov, '/gov/logout')
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG
