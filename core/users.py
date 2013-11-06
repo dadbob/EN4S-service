@@ -27,8 +27,8 @@ def cleanup_user_for_session(user):
     return user
 
 
-def login_user(session, email, password, android_id="",
-               apple_id="", current_city=""):
+def login_user(session, email, password, client,
+               android_id="", apple_id="", current_city=""):
     """
 
     Arguments:
@@ -65,6 +65,12 @@ def login_user(session, email, password, android_id="",
             db.users.update(
                 {"_id": user["_id"]},
                 {"$set": {"current_city": current_city}}
+            )
+
+        if client:
+            db.users.update(
+                {"_id": user["_id"]},
+                {"$set": {"client": client}}
             )
 
         user = db.users.find_one(

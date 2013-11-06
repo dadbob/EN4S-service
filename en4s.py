@@ -88,11 +88,12 @@ class Login(restful.Resource):
 
         current_city = data_dict.get("current_city", "")
         android_id = data_dict.get("android_notification", "")
-        apple_id = data_dict.get("apple_notification")
+        apple_id = data_dict.get("apple_notification", "")
+        client = data_dict.get("client", "")
 
         return cuser.login_user(
-            session, email, pwd, android_id, apple_id,
-            current_city=current_city
+            session, email, pwd, client,
+            android_id, apple_id, current_city
         )
 
 

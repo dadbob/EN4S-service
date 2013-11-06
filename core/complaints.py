@@ -95,7 +95,7 @@ def post_new_complaint(session, location, title, pic_arr, category):
         "public_url": public_url,
         "category": category,
         "comments": [],
-        "upvoters": [user["_id"]],
+        "upvoters": [ObjectId(user["_id"])],
         "downvoters": [],
         "upvote_count": 1,
         "downvote_count": 0,
