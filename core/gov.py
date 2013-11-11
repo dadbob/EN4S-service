@@ -1,8 +1,4 @@
-import requests
-
 import bcrypt
-import urllib
-import hashlib
 
 from settings import db
 from serviceutils import make_slug, check_mail
@@ -46,3 +42,90 @@ def login_gov(session, govname, password):
         session['gov'] = gov
         gov = serialize_gov(gov)
         return gov, 200
+
+
+def fix_complaint(session, notification, complaint_id):
+    """
+
+    Arguments:
+    - `session`:
+    - `notification`:
+    - `complaint_id`:
+    """
+    govname = session.get("govname")
+    # govtitle = session.get("title")
+
+    if not govname:
+        return {"error", "authentication required"}, 401
+
+    if not complaint_id:
+        return {"error", "complaint id required"}, 404
+
+    complaint_id = ObjectId(complaint_id)
+
+    db.complaint.update(
+        {"_id": complaint_id},
+        {"$set": {"status": "fixed"}}
+    )
+
+    # send notification here
+
+    return {"success", "action completed"}, 200
+
+
+def accept_complaint(session, notification, complaint_id):
+    """
+
+    Arguments:
+    - `session`:
+    - `notification`:
+    - `complaint_id`:
+    """
+    govname = session.get("govname")
+    # govtitle = session.get("title")
+
+    if not govname:
+        return {"error", "authentication required"}, 401
+
+    if not complaint_id:
+        return {"error", "complaint id required"}, 404
+
+    complaint_id = ObjectId(complaint_id)
+
+    db.complaint.update(
+        {"_id": complaint_id},
+        {"$set": {"status": "accepted"}}
+    )
+
+    # send notification here
+
+    return {"success", "action completed"}, 200
+
+
+def reject_complaint(session, notification, complaint_id):
+    """
+
+    Arguments:
+    - `session`:
+    - `notification`:
+    - `complaint_id`:
+    """
+    govname = session.get("govname")
+    # govtitle = session.get("title")
+
+    if not govname:
+        return {"error", "authentication required"}, 401
+
+    if not complaint_id:
+        return {"error", "complaint id required"}, 404
+
+    complaint_id = ObjectId(complaint_id)
+
+    db.complaint.update(
+        {"_id": complaint_id},
+        {"$set": {"status": "rejected"}}
+    )
+
+    # send notification here
+
+    return {"success", "action completed"}, 200

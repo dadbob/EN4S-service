@@ -366,6 +366,35 @@ class LogoutGov(restful.Resource):
         return {"success": "successfuly logged out"}, 200
 
 
+class ComplaintFix(restful.Resource):
+    def post(self):
+        data_dict = json.loads(request.data)
+
+        notification = data_dict.get("notification", "")
+        complaint_id = data_dict.get("complaint_id", "")
+
+        return cgov.fix_complaint(session, notification, complaint_id)
+
+
+class ComplaintAccept(restful.Resource):
+    def post(self):
+        data_dict = json.loads(request.data)
+
+        notification = data_dict.get("notification", "")
+        complaint_id = data_dict.get("complaint_id", "")
+
+        return cgov.accept_complaint(session, notification, complaint_id)
+
+
+class ComplaintReject(restful.Resource):
+    def post(self):
+        data_dict = json.loads(request.data)
+
+        notification = data_dict.get("notification", "")
+        complaint_id = data_dict.get("complaint_id", "")
+
+        return cgov.reject_complaint(session, notification, complaint_id)
+
 # user resources
 api.add_resource(Hatirlat, '/user/hatirlat')
 api.add_resource(Login, '/user/login')
@@ -402,6 +431,9 @@ api.add_resource(CommentsDelete, '/comments/delete')
 # govs
 api.add_resource(LoginGov, '/gov/login')
 api.add_resource(LogoutGov, '/gov/logout')
+api.add_resource(ComplaintFix, '/gov/complaint/fix')
+api.add_resource(ComplaintAccept, '/gov/complaint/accept')
+api.add_resource(ComplaintReject, '/gov/complaint/reject')
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG
