@@ -6,7 +6,7 @@ import base64
 import requests
 
 from PIL import Image
-
+from settings import db
 
 def make_slug(text):
     return slugify.slugify(text.replace(u"ı", u"i"))
@@ -166,3 +166,25 @@ def byte_array_to_file(array, city, h):
         print "couldn't save the thumbnails. sorry"
 
     return new_url
+
+
+def complaint_to_device_id_list(complaint_id):
+    """
+
+    Arguments:
+    - `complaint_id`:
+    """
+    complaint = db.complaint.find_one({"_id": complaint_id})
+    upvoters = complaint.get("upvoters")
+    downvoters = complaint.get("downvoters")
+
+    voters = upvoters + downvoters
+
+    device_ids = {"apple": [], "android": []}
+    for voter in voters:
+        voter_details = db.users.find_one({"_id": voter})
+        voter_devices = voter_details.get("devices")
+        for device_type, device_id in voter_devices:
+            device_ids[device_type].insert(device_id)
+
+    return device_ids
