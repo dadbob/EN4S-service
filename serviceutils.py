@@ -181,10 +181,16 @@ def complaint_to_device_id_list(complaint_id):
     voters = upvoters + downvoters
 
     device_ids = {"apple": [], "android": []}
+
     for voter in voters:
         voter_details = db.users.find_one({"_id": voter})
-        voter_devices = voter_details.get("devices")
-        for device_type, device_id in voter_devices:
-            device_ids[device_type].insert(device_id)
+        if voter_details:
+            voter_devices = voter_details.get("devices")
+            if voter_devices:
+                for device in voter_devices:
+                    if "android" in device:
+                        device_ids["android"].append(device["android"])
+                    if "apple" in device:
+                        device_ids["apple"].append(device["apple"])
 
     return device_ids
