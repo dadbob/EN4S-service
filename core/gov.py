@@ -3,6 +3,7 @@ import bcrypt
 from settings import db
 from serviceutils import make_slug, check_mail
 from serviceutils import serialize_user, serialize_complaint
+from serviceutils import complaint_to_device_id_list
 
 from bson import ObjectId
 
@@ -52,14 +53,14 @@ def fix_complaint(session, notification, complaint_id):
     - `notification`:
     - `complaint_id`:
     """
-    govname = session.get("govname")
+    govname = session.get("gov")["govname"]
     # govtitle = session.get("title")
 
     if not govname:
-        return {"error", "authentication required"}, 401
+        return {"error": "authentication required"}, 401
 
     if not complaint_id:
-        return {"error", "complaint id required"}, 404
+        return {"error": "complaint id required"}, 404
 
     complaint_id = ObjectId(complaint_id)
 
@@ -69,8 +70,9 @@ def fix_complaint(session, notification, complaint_id):
     )
 
     # send notification here
+    print complaint_to_device_id_list(complaint_id)
 
-    return {"success", "action completed"}, 200
+    return {"success": "action completed"}, 200
 
 
 def accept_complaint(session, notification, complaint_id):
@@ -85,10 +87,10 @@ def accept_complaint(session, notification, complaint_id):
     # govtitle = session.get("title")
 
     if not govname:
-        return {"error", "authentication required"}, 401
+        return {"error": "authentication required"}, 401
 
     if not complaint_id:
-        return {"error", "complaint id required"}, 404
+        return {"error": "complaint id required"}, 404
 
     complaint_id = ObjectId(complaint_id)
 
@@ -98,8 +100,9 @@ def accept_complaint(session, notification, complaint_id):
     )
 
     # send notification here
+    print complaint_to_device_id_list(complaint_id)
 
-    return {"success", "action completed"}, 200
+    return {"success": "action completed"}, 200
 
 
 def reject_complaint(session, notification, complaint_id):
@@ -114,10 +117,10 @@ def reject_complaint(session, notification, complaint_id):
     # govtitle = session.get("title")
 
     if not govname:
-        return {"error", "authentication required"}, 401
+        return {"error": "authentication required"}, 401
 
     if not complaint_id:
-        return {"error", "complaint id required"}, 404
+        return {"error": "complaint id required"}, 404
 
     complaint_id = ObjectId(complaint_id)
 
@@ -127,5 +130,6 @@ def reject_complaint(session, notification, complaint_id):
     )
 
     # send notification here
+    print complaint_to_device_id_list(complaint_id)
 
-    return {"success", "action completed"}, 200
+    return {"success": "action completed"}, 200

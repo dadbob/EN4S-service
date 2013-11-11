@@ -368,6 +368,7 @@ class LogoutGov(restful.Resource):
 
 class ComplaintFix(restful.Resource):
     def post(self):
+
         data_dict = json.loads(request.data)
 
         notification = data_dict.get("notification", "")
