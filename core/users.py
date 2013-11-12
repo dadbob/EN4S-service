@@ -274,21 +274,23 @@ def get_user_with_slug(slug):
     cmps = []
     for complaint in user["complaints"]:
         temp_cmp = db.complaint.find_one({"_id": ObjectId(complaint)})
-        temp_cmp.pop("user")
-        comments = temp_cmp.pop("comments")
-        temp_cmp["comments_count"] = len(comments)
-        temp_cmp = serialize_complaint(temp_cmp)
-        cmps.append(temp_cmp)
+        if temp_cmp:
+            temp_cmp.pop("user")
+            comments = temp_cmp.pop("comments")
+            temp_cmp["comments_count"] = len(comments)
+            temp_cmp = serialize_complaint(temp_cmp)
+            cmps.append(temp_cmp)
     user["complaints"] = cmps
 
     upvts = []
     for upvote in user["upvotes"]:
         temp_upvote = db.complaint.find_one({"_id": ObjectId(upvote)})
-        temp_upvote.pop("user")
-        comments = temp_upvote.pop("comments")
-        temp_upvote["comments_count"] = len(comments)
-        temp_upvote = serialize_complaint(temp_upvote)
-        upvts.append(temp_upvote)
+        if temp_upvote:
+            temp_upvote.pop("user")
+            comments = temp_upvote.pop("comments")
+            temp_upvote["comments_count"] = len(comments)
+            temp_upvote = serialize_complaint(temp_upvote)
+            upvts.append(temp_upvote)
     user["upvotes"] = upvts
     return user, 200
 
