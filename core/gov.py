@@ -1,8 +1,6 @@
 import bcrypt
 
 from settings import db
-from serviceutils import make_slug, check_mail
-from serviceutils import serialize_user, serialize_complaint
 from serviceutils import complaint_to_device_id_list
 
 from bson import ObjectId
