@@ -3,6 +3,7 @@ import core.users as cuser
 import core.complaints as ccomp
 import core.comments as ccomm
 import core.gov as cgov
+import core.notes as cnot
 
 import json
 import bcrypt
@@ -396,6 +397,22 @@ class ComplaintReject(restful.Resource):
 
         return cgov.reject_complaint(session, notification, complaint_id)
 
+
+class NoteToCity(restful.Resource):
+    def post(self, city):
+        data_dict = json.loads(request.data)
+
+        note_title = data_dict.get("note_title", "")
+        note_full = data_dict.get("note_title", "")
+
+        return cnot.notes_to_city(session, city, note_title, note_full)
+
+
+class NotesForCity(restful.Resource):
+    def get(self, city):
+        return cnot.notes_for_city(city)
+
+
 # user resources
 api.add_resource(Hatirlat, '/user/hatirlat')
 api.add_resource(Login, '/user/login')
@@ -435,6 +452,11 @@ api.add_resource(LogoutGov, '/gov/logout')
 api.add_resource(ComplaintFix, '/gov/complaint/fix')
 api.add_resource(ComplaintAccept, '/gov/complaint/accept')
 api.add_resource(ComplaintReject, '/gov/complaint/reject')
+
+# notifications
+api.add_resource(NoteToCity, '/notification/<string:city>')
+api.add_resource(NotesForCity, '/notification/<string:city>')
+
 
 if __name__ == '__main__':
     app.debug = settings.DEBUG
