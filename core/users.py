@@ -159,6 +159,8 @@ def login_user_with_facebook(session, email, access_token,
             except:
                 return {'error': 'cont login with facebook'}, 400
         else:
+            json_data = r.json()
+
             if user['fb'] == 0:
                 if "username" in json_data:
                     username = json_data["username"]
