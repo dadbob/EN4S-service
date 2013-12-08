@@ -9,6 +9,7 @@ from serviceutils import make_slug, check_mail
 from serviceutils import serialize_user, serialize_complaint
 
 from bson import ObjectId
+from datetime import datetime
 
 
 def cleanup_user_for_session(user):
@@ -141,7 +142,8 @@ def login_user_with_facebook(session, email, access_token,
                         "avatar": avatar_url,
                         "user_type": "member",
                         "user_slug": user_slug,
-                        "fb": 1
+                        "fb": 1,
+                        "register_date": datetime.now()
                     }
                 )
 
@@ -237,7 +239,8 @@ def register_user(session, email, password, first_name, last_name):
         "password": password,
         "user_type": "member",
         "user_slug": user_slug,
-        "fb": 0
+        "fb": 0,
+        "register_date": datetime.now()
     }
 
     if not (email or password):
