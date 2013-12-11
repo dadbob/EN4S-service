@@ -3,7 +3,7 @@ from settings import db
 from datetime import datetime
 
 from serviceutils import make_slug
-# from flask import make_response
+from serviceutils import serialize_mongodb_object
 
 
 def note_single(city, slug):
@@ -12,8 +12,8 @@ def note_single(city, slug):
     Arguments:
     - `city`:
     """
-    single_note = db.notes.find({"slug_url": "/not/" + city + "/" + slug})
-    return json_util.dumps(single_note)
+    single_note = db.notes.find_one({"slug_url": "/not/" + city + "/" + slug})
+    return serialize_mongodb_object(single_note)
 
 
 def notes_for_city(city):
@@ -27,7 +27,8 @@ def notes_for_city(city):
 
 
 def notes_to_city(session, city, district, note_title, note_description,
-                  note_start_date, note_end_date, location, source):
+                  note_start_date, note_end_date, location,
+                  source, fields, tags):
 
     """
 
@@ -39,6 +40,7 @@ def notes_to_city(session, city, district, note_title, note_description,
     - `note_end_date`: planned solution time
     - `location`: average location of the problem
     - `source`: source of the knowledge (izsu, aski etc)
+    - `fields`: effected fields. Eg. (balgat mah, sogutozu etc)
     """
 
     sender = None
@@ -73,6 +75,16 @@ def notes_to_city(session, city, district, note_title, note_description,
         note_end_date, "%d-%m-%Y %H:%M"
     )
 
+    fields = fields.split(",")
+    new_fields = []
+    for f in fields:
+        new_fields.append(make_slug(f.strip()))
+
+    tags = tags.split(",")
+    new_tags = []
+    for t in tags:
+        new_tags.append(make_slug(t.strip()))
+
     new_note = {
         "_id": ObjectId(),
         "city": city,
@@ -87,7 +99,9 @@ def notes_to_city(session, city, district, note_title, note_description,
         "sender": sender,
         "source": source,
         "location": location,
-        "slug_url": slug_url
+        "slug_url": slug_url,
+        "areas": new_fields,
+        "tags": new_tags
     }
 
     db.notes.insert(new_note)

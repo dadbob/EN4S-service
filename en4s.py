@@ -410,10 +410,12 @@ class NoteToCity(restful.Resource):
         note_end_date = data_dict.get("end_date", "")
         location = data_dict.get("location", "")
         source = data_dict.get("source", "")
+        fields = data_dict.get("fields", "")
+        tags = data_dict.get("tags", "")
 
         return cnot.notes_to_city(
             session, city, district, note_title, note_description,
-            note_start_date, note_end_date, location, source
+            note_start_date, note_end_date, location, source, fields, tags
         )
 
 
