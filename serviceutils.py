@@ -7,6 +7,15 @@ import requests
 
 from PIL import Image
 from settings import db
+from bson import json_util
+import json
+
+
+def serialize_mongodb_object(mongo_dict):
+    json_string = json_util.dumps(mongo_dict)
+    json_object = json.loads(json_string)
+    return json_object
+
 
 def make_slug(text):
     return slugify.slugify(text.replace(u"ı", u"i"))
