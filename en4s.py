@@ -399,18 +399,32 @@ class ComplaintReject(restful.Resource):
 
 
 class NoteToCity(restful.Resource):
-    def post(self, city):
+    def post(self):
         data_dict = json.loads(request.data)
 
-        note_title = data_dict.get("note_title", "")
-        note_full = data_dict.get("note_title", "")
+        city = data_dict.get("city", "")
+        district = data_dict.get("district", "")
+        note_title = data_dict.get("title", "")
+        note_description = data_dict.get("description", "")
+        note_start_date = data_dict.get("start_date", "")
+        note_end_date = data_dict.get("end_date", "")
+        location = data_dict.get("location", "")
+        source = data_dict.get("source", "")
 
-        return cnot.notes_to_city(session, city, note_title, note_full)
+        return cnot.notes_to_city(
+            session, city, district, note_title, note_description,
+            note_start_date, note_end_date, location, source
+        )
 
 
 class NotesForCity(restful.Resource):
     def get(self, city):
         return cnot.notes_for_city(city)
+
+
+class NoteSingle(restful.Resource):
+    def get(self, city, slug):
+        return cnot.note_single(city, slug)
 
 
 # user resources
@@ -454,8 +468,9 @@ api.add_resource(ComplaintAccept, '/gov/complaint/accept')
 api.add_resource(ComplaintReject, '/gov/complaint/reject')
 
 # notifications
-api.add_resource(NoteToCity, '/notification/<string:city>')
+api.add_resource(NoteToCity, '/notification')
 api.add_resource(NotesForCity, '/notification/<string:city>')
+api.add_resource(NoteSingle, '/notification/<string:city>/<string:slug>')
 
 
 if __name__ == '__main__':
