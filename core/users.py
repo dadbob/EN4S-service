@@ -324,6 +324,20 @@ def update_profile_info(session, user, twitter, website):
     return user, 200
 
 
+def update_user_not_settings(session, user, data_dict):
+    for k, v in data_dict.iter():
+        key = k
+        val = v
+
+    userid = user["_id"]
+    key = "settings." + key
+
+    db.users.update(
+        {"_id": ObjectId(userid)},
+        {"$set": {key: val}}
+    )
+
+
 def update_user_city(session, user, current_city):
     """
 

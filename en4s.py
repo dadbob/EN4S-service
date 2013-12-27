@@ -173,6 +173,16 @@ class ProfileUpdate(restful.Resource):
         return 402
 
 
+class UserSettings(restful.Resource):
+    def post(self):
+        data_dict = json.loads(request.data)
+        user = session.get("user")
+        if not user:
+            return abort(404)
+
+        return cuser.update_user_not_settings(session, user, data_dict)
+
+
 class UserAll(restful.Resource):
     def get(self):
         users = db.users.find()
@@ -412,10 +422,12 @@ class NoteToCity(restful.Resource):
         source = data_dict.get("source", "")
         fields = data_dict.get("fields", "")
         tags = data_dict.get("tags", "")
+        icon = data_dict.get("icon", "")
 
         return cnot.notes_to_city(
             session, city, district, note_title, note_description,
-            note_start_date, note_end_date, location, source, fields, tags
+            note_start_date, note_end_date, location, source,
+            fields, tags, icon
         )
 
 
