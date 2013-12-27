@@ -57,6 +57,11 @@ def serialize_user(item):
         obj.pop("password", None)
         obj["_id"] = unicode(obj["_id"])
 
+        if "register_date" in obj:
+            obj["register_date"] = unicode(
+                obj["register_date"].strftime("%Y-%m-%d %H:%M:%S.%f")
+            )
+
         if "complaints" in obj:
             serialized_complaints = []
             complaints = obj["complaints"]
