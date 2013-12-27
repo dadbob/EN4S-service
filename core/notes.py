@@ -1,6 +1,9 @@
+import pymongo
+
 from bson import json_util, ObjectId
 from settings import db
 from datetime import datetime
+from flask import abort
 
 from serviceutils import make_slug
 from serviceutils import serialize_mongodb_object
@@ -22,13 +25,18 @@ def notes_for_city(city):
     Arguments:
     - `city`:
     """
-    notes = db.notes.find({"city": city})
-    return json_util.dumps(notes)
+    if city not in ["ankara", "istanbul", "izmir"]:
+        return abort(404)
+
+    notes = db.notes.find({"slug_city": city})
+    notes = notes.sort("insert_date", pymongo.DESCENDING)
+
+    return serialize_mongodb_object(notes)
 
 
 def notes_to_city(session, city, district, note_title, note_description,
                   note_start_date, note_end_date, location,
-                  source, fields, tags):
+                  source, fields, tags, icon):
 
     """
 
@@ -41,6 +49,8 @@ def notes_to_city(session, city, district, note_title, note_description,
     - `location`: average location of the problem
     - `source`: source of the knowledge (izsu, aski etc)
     - `fields`: effected fields. Eg. (balgat mah, sogutozu etc)
+    - `tags`: tags. Eg. (su kesintisi, elektrik kesintisi)
+    - `icon`: icon of the tag
     """
 
     sender = None
@@ -85,6 +95,8 @@ def notes_to_city(session, city, district, note_title, note_description,
     for t in tags:
         new_tags.append(make_slug(t.strip()))
 
+    icon = "/static/img/not-icons/" + icon
+
     new_note = {
         "_id": ObjectId(),
         "city": city,
@@ -101,7 +113,8 @@ def notes_to_city(session, city, district, note_title, note_description,
         "location": location,
         "slug_url": slug_url,
         "areas": new_fields,
-        "tags": new_tags
+        "tags": new_tags,
+        "icon": icon
     }
 
     db.notes.insert(new_note)
