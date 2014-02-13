@@ -215,7 +215,7 @@ def register_user(session, email, password, first_name, last_name):
     name = first_name + " " + last_name
     password = bcrypt.hashpw(password, bcrypt.gensalt())
 
-    default = "http://enforceapp.com/static/img/enforce-avatar-small.png"
+    default = "http://enforceapp.com/static/img/enforce-avatar-big.png"
     size = 75
     gravatar_url = "http://www.gravatar.com/avatar/" +\
                    hashlib.md5(email.lower()).hexdigest() + "?"
