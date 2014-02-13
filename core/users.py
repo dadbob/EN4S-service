@@ -286,6 +286,11 @@ def get_user_with_slug(slug):
             temp_cmp = serialize_complaint(temp_cmp)
             cmps.append(temp_cmp)
     user["complaints"] = cmps
+    user["complaints"] = sorted(
+        user["complaints"],
+        key=lambda k: k["date"],
+        reverse=True
+    )
 
     upvts = []
     for upvote in user["upvotes"]:
@@ -297,6 +302,12 @@ def get_user_with_slug(slug):
             temp_upvote = serialize_complaint(temp_upvote)
             upvts.append(temp_upvote)
     user["upvotes"] = upvts
+    user["upvotes"] = sorted(
+        user["upvotes"],
+        key=lambda k: k["date"],
+        reverse=True
+    )
+
     return user, 200
 
 
